@@ -171,12 +171,13 @@ async function executeDelete() {
                 {{ formatDistanceToNow(new Date(conv.createdAt), { addSuffix: true }) }}
               </span>
             </div>
-            <h3
-              class="font-medium text-stone-900 dark:text-stone-100 line-clamp-1"
+            <NuxtLink
+              :to="`/conversation/${conv.id}`"
+              class="font-medium text-stone-900 dark:text-stone-100 line-clamp-1 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
               :title="conv.title"
             >
               {{ conv.title }}
-            </h3>
+            </NuxtLink>
             <p class="text-xs text-stone-500 mt-1 line-clamp-2 min-h-[2.5em]">
               {{ conv.summary || 'No summary available.' }}
             </p>
