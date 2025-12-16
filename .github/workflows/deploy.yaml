@@ -1,0 +1,110 @@
+name: Deploy
+run-name: Deploy from ${{ github.event.workflow_run.head_branch }}
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main, dev]
+    types: 
+      - completed
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          repository: ${{ github.event.workflow_run.head_repository.full_name }}
+
+      - name: Set up Kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Create Kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Deploy to K3s
+        run: |
+          # 1. Resolve Tag from Upstream CI (Full SHA)
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          TARGET_BRANCH="${{ github.event.workflow_run.head_branch }}"
+          IMAGE_TAG="sha-${HEAD_SHA}"
+          
+          echo "Deploying Image: ${IMAGE_TAG} from branch ${TARGET_BRANCH}"
+
+          # 2. Determine Environment Configuration
+          PROJECT_DOMAIN="vcm-51278.vm.duke.edu"
+          INGRESS_HOST="$PROJECT_DOMAIN"
+          
+          if [[ "$TARGET_BRANCH" == "main" ]]; then
+            echo "Target: Production"
+            NAMESPACE="agora"
+            PATH_PREFIX="/agora"
+          elif [[ "$TARGET_BRANCH" == "dev" ]]; then
+            echo "Target: Staging"
+            NAMESPACE="agora-staging"
+            PATH_PREFIX="/agora/beta"
+            PRIORITY="100"
+            STICKY_NAME="agora_staging_sticky"
+          else
+            echo "❌ Error: Deployment is not configured for branch '$TARGET_BRANCH'"
+            exit 1
+          fi
+
+          echo "Namespace: $NAMESPACE"
+          echo "Ingress Host: $INGRESS_HOST"
+          echo "Path Prefix: $PATH_PREFIX"
+
+          # 3. Build Dependencies
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm dependency build ./helm
+
+          # 4. Helm Upgrade
+          helm upgrade --install agora ./helm \
+            --namespace $NAMESPACE \
+            --create-namespace \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=$IMAGE_TAG \
+            --set ingress.host=$INGRESS_HOST \
+            --set ingress.pathPrefix=$PATH_PREFIX \
+            --set env.NUXT_PUBLIC_BASE_URL=$PATH_PREFIX \
+            --set env.NUXT_APP_BASE_URL=$PATH_PREFIX \
+            --set probes.liveness.path=$PATH_PREFIX/api/health \
+            --set probes.readiness.path=$PATH_PREFIX/api/health \
+            --set ingress.priority=$PRIORITY \
+            --set ingress.stickyName=$STICKY_NAME \
+            --wait \
+            --rollback-on-failure \
+            --cleanup-on-fail \
+            --timeout 5m
+
+  cleanup:
+    name: Prune Registry
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always()
+    permissions:
+      packages: write
+    steps:
+      - name: Prune old images
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: 'agora'
+          package-type: 'container'
+          min-versions-to-keep: 20
+          delete-only-untagged-versions: 'false'
+        continue-on-error: true

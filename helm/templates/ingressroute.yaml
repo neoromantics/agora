@@ -1,0 +1,62 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "agora.fullname" . }}
+  labels:
+    {{- include "agora.labels" . | nindent 4 }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.ingress.host }}`) && PathPrefix(`{{ .Values.ingress.pathPrefix }}`)
+      kind: Rule
+      {{- if .Values.ingress.priority }}
+      priority: {{ .Values.ingress.priority }}
+      {{- end }}
+      services:
+        - name: {{ include "agora.fullname" . }}
+          port: {{ .Values.service.port }}
+          sticky:
+            cookie:
+              name: {{ .Values.ingress.stickyName | default "agora_sticky" }}
+              secure: true
+              httpOnly: true
+
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    secretName: {{ .Values.ingress.tls.secretName }}
+    {{- if .Values.ingress.tls.certResolver }}
+    certResolver: {{ .Values.ingress.tls.certResolver }}
+    {{- end }}
+  {{- end }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "agora.fullname" . }}-http
+  labels:
+    {{- include "agora.labels" . | nindent 4 }}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`{{ .Values.ingress.host }}`)
+      kind: Rule
+      services:
+        - name: {{ include "agora.fullname" . }}
+          port: {{ .Values.service.port }}
+      middlewares:
+        - name: {{ include "agora.fullname" . }}-https-redirect
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "agora.fullname" . }}-https-redirect
+  labels:
+    {{- include "agora.labels" . | nindent 4 }}
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+{{- end }}

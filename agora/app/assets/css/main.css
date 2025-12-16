@@ -1,0 +1,318 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/*
+ * Agora - Classic & Elegant Design System
+ * A refined palette inspired by antiquarian books and philosophical discourse
+ */
+
+/* ============================================
+   Typography System
+   ============================================ */
+
+:root {
+    /* Classical fonts */
+    --font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Elegant color palette - warm neutrals with deep accents */
+    --color-cream: #FAF8F5;
+    --color-parchment: #F4F1EB;
+    --color-sepia-light: #E8E3D9;
+    --color-sepia: #D4CCC0;
+    --color-charcoal: #2C2825;
+    --color-ink: #1A1816;
+
+    /* Accent colors - rich and sophisticated */
+    --color-burgundy: #722F37;
+    --color-gold: #B8860B;
+    --color-olive: #556B2F;
+    --color-navy: #1E3A5F;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+
+html {
+    font-family: var(--font-sans);
+    background-color: var(--color-cream);
+    color: var(--color-charcoal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+/* ============================================
+   Typography Classes
+   ============================================ */
+
+.font-serif {
+    font-family: var(--font-serif);
+    font-feature-settings: "liga" 1, "calt" 1;
+    letter-spacing: 0.01em;
+}
+
+.font-sans {
+    font-family: var(--font-sans);
+}
+
+/* Heading styles */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+}
+
+/* ============================================
+   Light Mode Theme
+   ============================================ */
+
+:root {
+    --ui-bg: var(--color-cream);
+    --ui-bg-elevated: #FFFFFF;
+    --ui-border: var(--color-sepia);
+    --ui-text: var(--color-charcoal);
+    --ui-text-muted: #6B6560;
+    --ui-text-dimmed: #9A938A;
+}
+
+/* ============================================
+   Dark Mode Theme
+   ============================================ */
+
+.dark {
+    --ui-bg: #1A1816;
+    --ui-bg-elevated: #252220;
+    --ui-border: #3A3632;
+    --ui-text: #E8E3D9;
+    --ui-text-muted: #A9A299;
+    --ui-text-dimmed: #706B64;
+}
+
+.dark body,
+.dark html {
+    background-color: var(--color-ink);
+    color: var(--color-sepia-light);
+}
+
+/* ============================================
+   Custom Background Colors
+   ============================================ */
+
+.bg-cream {
+    background-color: var(--color-cream);
+}
+
+.bg-parchment {
+    background-color: var(--color-parchment);
+}
+
+/* ============================================
+   Message Bubble Styles
+   ============================================ */
+
+.message-user {
+    background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
+    color: white;
+    border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+}
+
+.message-philosopher {
+    background: linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%);
+    color: var(--color-charcoal);
+    border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+    border: 1px solid var(--color-sepia);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.dark .message-philosopher {
+    background: linear-gradient(135deg, #2A2724 0%, #252220 100%);
+    color: var(--color-sepia-light);
+    border-color: #3A3632;
+}
+
+/* ============================================
+   Blockquote Styling
+   ============================================ */
+
+blockquote {
+    border-left: 3px solid var(--color-gold);
+    padding-left: 1.25rem;
+    margin: 1.5rem 0;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.1rem;
+    color: var(--color-charcoal);
+    line-height: 1.8;
+}
+
+.dark blockquote {
+    border-left-color: var(--color-gold);
+    color: var(--color-sepia-light);
+}
+
+/* ============================================
+   Card Styling
+   ============================================ */
+
+.philosopher-card {
+    background: linear-gradient(180deg, #FFFFFF 0%, var(--color-parchment) 100%);
+    border: 1px solid var(--color-sepia);
+    border-radius: 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.philosopher-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    border-color: var(--color-gold);
+}
+
+.dark .philosopher-card {
+    background: linear-gradient(180deg, #252220 0%, #1A1816 100%);
+    border-color: #3A3632;
+}
+
+.dark .philosopher-card:hover {
+    border-color: var(--color-gold);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   Button Overrides - Classic Elegance
+   ============================================ */
+
+/* Primary buttons - deep indigo */
+[data-ui="button"][data-color="primary"] {
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+/* Elegant focus states */
+button:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+}
+
+/* ============================================
+   Form Input Styling
+   ============================================ */
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--ui-text-dimmed);
+    font-style: italic;
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-sepia);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--ui-text-dimmed);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #3A3632;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #4A4642;
+}
+
+/* ============================================
+   Selection Styling
+   ============================================ */
+
+::selection {
+    background-color: rgba(79, 70, 229, 0.2);
+    color: var(--color-charcoal);
+}
+
+.dark ::selection {
+    background-color: rgba(99, 102, 241, 0.3);
+    color: var(--color-sepia-light);
+}
+
+/* ============================================
+   Link Styling
+   ============================================ */
+
+a {
+    transition: color 0.2s ease;
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Smooth page transitions */
+.page-enter-active,
+.page-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.page-enter-from,
+.page-leave-to {
+    opacity: 0;
+}
+
+/* Animation for new elements */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}

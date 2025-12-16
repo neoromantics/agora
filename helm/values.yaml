@@ -1,0 +1,103 @@
+# Agora Helm Chart Values
+# Default values for agora deployment
+
+# Image configuration
+image:
+  repository: ghcr.io/neoromantics/agora
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Number of replicas
+replicaCount: 2
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 3000
+
+# Ingress configuration (Traefik IngressRoute)
+ingress:
+  enabled: true
+  pathPrefix: /agora
+  host: vcm-51278.vm.duke.edu
+  tls:
+    enabled: true
+    secretName: agora-tls
+    certResolver: letsencrypt
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+# Environment variables from secrets
+secrets:
+  existingSecret: agora-secrets
+
+# Environment variables
+env:
+  NODE_ENV: production
+  NUXT_PUBLIC_BASE_URL: /agora
+
+# Liveness and readiness probes
+probes:
+  liveness:
+    path: /api/health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readiness:
+    path: /api/health
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+# Pod annotations
+podAnnotations: {}
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# PostgreSQL dependency (using Bitnami chart)
+postgresql:
+  enabled: true
+  image:
+    tag: latest
+  auth:
+    database: agora
+    username: agora
+    existingSecret: agora-secrets
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: postgres-password
+  primary:
+    persistence:
+      size: 20Gi
+
+# Redis dependency (using Bitnami chart)
+redis:
+  enabled: true
+  image:
+    tag: latest
+  auth:
+    enabled: true
+    existingSecret: agora-secrets
+    existingSecretPasswordKey: redis-password
+  master:
+    persistence:
+      size: 5Gi

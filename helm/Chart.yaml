@@ -1,0 +1,23 @@
+apiVersion: v2
+name: agora
+description: Agora - Philosopher Conversation Platform Helm Chart
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - nuxt
+  - philosophy
+  - social
+  - conversation
+maintainers:
+  - name: Taiyan Liu
+    email: newromantics2001@gmail.com
+dependencies:
+  - name: postgresql
+    version: 13.2.24
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 18.4.0
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String         @id @default(cuid())
+  email          String         @unique
+  passwordHash   String?
+  name           String
+  username       String         @unique
+  avatar         String?
+  bio            String?
+  role           Role           @default(USER)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  comments       Comment[]
+  conversations  Conversation[]
+  likes          Like[]
+  commentLikes   CommentLike[]
+  sessions       Session[]
+  passwordResets PasswordReset[]
+  notifications  Notification[]
+
+
+  @@index([email])
+  @@index([username])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  FORK
+}
+
+model Notification {
+  id             String           @id @default(cuid())
+  userId         String           // User who receives the notification
+  type           NotificationType
+  conversationId String?          // Related conversation
+  actorId        String?          // User who triggered the action
+  message        String           // Human-readable message
+  read           Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, read])
+}
+
+model Philosopher {
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  era           String
+  years         String
+  nationality   String
+  biography     String
+  portrait      String
+  systemPrompt  String
+  topics        String[]
+  quotes        String[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  conversations Conversation[]
+
+  @@index([slug])
+  @@index([era])
+}
+
+model Conversation {
+  id            String         @id @default(cuid())
+  title         String
+  summary       String?
+  isPublic      Boolean        @default(false)
+  isAnonymous   Boolean        @default(false)  // Hide user name when shared
+  viewCount     Int            @default(0)
+  forkCount     Int            @default(0)      // How many times this was forked
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?      // Soft delete - null means active
+  userId        String
+  philosopherId String
+  forkedFromId  String?        // Original conversation if this is a fork
+  comments      Comment[]
+  philosopher   Philosopher    @relation(fields: [philosopherId], references: [id])
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  forkedFrom    Conversation?  @relation("ConversationForks", fields: [forkedFromId], references: [id])
+  forks         Conversation[] @relation("ConversationForks")
+  likes         Like[]
+  messages      Message[]
+
+  @@index([userId])
+  @@index([philosopherId])
+  @@index([isPublic, createdAt])
+  @@index([deletedAt])
+  @@index([forkedFromId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  content        String
+  role           MessageRole
+  createdAt      DateTime     @default(now())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+model Like {
+  id             String       @id @default(cuid())
+  createdAt      DateTime     @default(now())
+  userId         String
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conversationId])
+  @@index([conversationId])
+}
+
+model Comment {
+  id             String        @id @default(cuid())
+  content        String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  userId         String
+  conversationId String
+  parentId       String?
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  parent         Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        Comment[]     @relation("CommentReplies")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes          CommentLike[]
+
+  @@index([conversationId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@index([commentId])
+}
+
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum MessageRole {
+  user
+  philosopher
+}
+
+// Analytics - Page View Tracking
+model PageView {
+  id          String   @id @default(cuid())
+  path        String   // URL path visited
+  referrer    String?  // Where they came from
+  userAgent   String?  // Browser/device info
+  ipAddress   String?  // Client IP
+  country     String?  // Geo: country
+  city        String?  // Geo: city
+  sessionId   String   // Anonymous session identifier
+  userId      String?  // If logged in
+  duration    Int?     // Time on page in seconds (updated on leave)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+  @@index([sessionId])
+  @@index([ipAddress])
+}
+
+model ClientLog {
+  id        String   @id @default(cuid())
+  level     String   // "error", "warn", "info"
+  message   String
+  stack     String?  // Stack trace if available
+  context   Json?    // Additional context (URL, component, etc.)
+  userAgent String?
+  userId    String?  // Optional: linked user
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([level])
+}
+
