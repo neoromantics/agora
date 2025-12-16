@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.output/
+.nuxt/
+dist/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kubernetes secrets (never commit!)
+k8s/secrets/*.yaml
+!k8s/secrets/*.example.yaml
+
+# Prisma
+prisma/migrations/**/migration_lock.toml
+
+# Test results
+playwright-report/
+test-results/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage
+coverage/
+
+# Helm
+helm/charts/
