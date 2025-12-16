@@ -186,14 +186,19 @@ async function executeDelete() {
           <!-- Participants -->
           <div class="p-4 flex items-center justify-between flex-1">
             <div class="flex items-center -space-x-2">
-              <UAvatar
+              <NuxtLink
                 v-if="conv.user"
-                :src="conv.user.avatar"
-                :alt="conv.user.name"
-                size="sm"
-                class="ring-2 ring-white dark:ring-stone-900"
-                :ui="{ chip: { base: 'hidden' } } as any"
-              />
+                :to="`/user/${conv.user.username}`"
+                class="hover:z-10 transition-transform hover:scale-110"
+              >
+                <UAvatar
+                  :src="conv.user.avatar"
+                  :alt="conv.user.name"
+                  size="sm"
+                  class="ring-2 ring-white dark:ring-stone-900 cursor-pointer"
+                  :ui="{ chip: { base: 'hidden' } } as any"
+                />
+              </NuxtLink>
               <UAvatar
                 v-else
                 icon="i-lucide-user"

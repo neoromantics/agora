@@ -188,12 +188,17 @@ async function executeDelete() {
         >
           <!-- Header (Avatar + Name) -->
           <div class="p-4 flex items-center gap-3 border-b border-stone-100 dark:border-stone-800/50 bg-stone-50/50 dark:bg-stone-800/20">
-            <UAvatar
-              :src="user.avatar"
-              :alt="user.name"
-              size="md"
-              class="ring-1 ring-stone-200 dark:ring-stone-700"
-            />
+            <NuxtLink
+              :to="`/user/${user.username}`"
+              class="hover:scale-110 transition-transform"
+            >
+              <UAvatar
+                :src="user.avatar"
+                :alt="user.name"
+                size="md"
+                class="ring-1 ring-stone-200 dark:ring-stone-700 cursor-pointer"
+              />
+            </NuxtLink>
             <div class="min-w-0 flex-1">
               <h3 class="font-medium text-stone-900 dark:text-stone-100 truncate">
                 {{ user.name }}
