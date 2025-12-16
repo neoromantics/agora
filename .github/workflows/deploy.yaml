@@ -3,7 +3,7 @@ name: Deploy
 on:
   workflow_run:
     workflows: ["CI"]
-    branches: [main]
+    branches: [main, dev]
     types: 
       - completed
 
@@ -41,7 +41,10 @@ jobs:
           
           echo "Deploying Image: ${IMAGE_TAG}"
 
-          # 2. Helm Upgrade
+          # 2. Build Dependencies
+          helm dependency build ./helm
+
+          # 3. Helm Upgrade
           helm upgrade --install agora ./helm \
             --namespace agora \
             --create-namespace \
