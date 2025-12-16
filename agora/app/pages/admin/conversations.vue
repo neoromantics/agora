@@ -186,14 +186,19 @@ async function executeDelete() {
           <!-- Participants -->
           <div class="p-4 flex items-center justify-between flex-1">
             <div class="flex items-center -space-x-2">
-              <UAvatar
+              <NuxtLink
                 v-if="conv.user"
-                :src="conv.user.avatar"
-                :alt="conv.user.name"
-                size="sm"
-                class="ring-2 ring-white dark:ring-stone-900"
-                :ui="{ chip: { base: 'hidden' } } as any"
-              />
+                :to="`/user/${conv.user.username}`"
+                class="hover:z-10 transition-transform hover:scale-110"
+              >
+                <UAvatar
+                  :src="conv.user.avatar"
+                  :alt="conv.user.name"
+                  size="sm"
+                  class="ring-2 ring-white dark:ring-stone-900 cursor-pointer"
+                  :ui="{ chip: { base: 'hidden' } } as any"
+                />
+              </NuxtLink>
               <UAvatar
                 v-else
                 icon="i-lucide-user"
@@ -208,14 +213,17 @@ async function executeDelete() {
                 class="ring-2 ring-white dark:ring-stone-900"
               />
             </div>
-            <div class="text-xs text-stone-500 flex items-center gap-1">
-              <span v-if="conv.user">{{ conv.user.username }}</span>
+            <div class="text-xs text-stone-500 flex flex-wrap items-center gap-1 min-w-0">
+              <span
+                v-if="conv.user"
+                class="truncate max-w-[60px]"
+              >{{ conv.user.username }}</span>
               <span
                 v-else
                 class="italic"
-              >Anonymous</span>
-              <span class="text-stone-300">with</span>
-              <span>{{ conv.philosopher.name }}</span>
+              >Anon</span>
+              <span class="text-stone-300 hidden sm:inline">with</span>
+              <span class="truncate max-w-[60px]">{{ conv.philosopher.name }}</span>
             </div>
           </div>
 
