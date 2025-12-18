@@ -111,7 +111,7 @@ model Conversation {
   philosopherId String
   forkedFromId  String?        // Original conversation if this is a fork
   comments      Comment[]
-  philosopher   Philosopher    @relation(fields: [philosopherId], references: [id])
+  philosopher   Philosopher    @relation(fields: [philosopherId], references: [id], onDelete: Cascade)
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   forkedFrom    Conversation?  @relation("ConversationForks", fields: [forkedFromId], references: [id])
   forks         Conversation[] @relation("ConversationForks")
