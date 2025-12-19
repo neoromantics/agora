@@ -34,6 +34,7 @@ interface Conversation {
 const props = defineProps<{
   conversation: Conversation
   canDelete?: boolean
+  preloadImage?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -147,6 +148,7 @@ const displayUserName = computed(() => {
                 width="32"
                 height="32"
                 fit="cover"
+                :loading="preloadImage ? 'eager' : 'lazy'"
                 class="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-stone-900"
               />
             </NuxtLink>
@@ -165,6 +167,7 @@ const displayUserName = computed(() => {
                 width="32"
                 height="32"
                 fit="cover"
+                :loading="preloadImage ? 'eager' : 'lazy'"
                 class="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-stone-900 cursor-pointer"
               />
               <span

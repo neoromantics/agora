@@ -54,152 +54,79 @@ definePageMeta({
   // No middleware - feed shows public conversations
 })
 
-const conversations = ref<Conversation[]>([])
-// const cursor = ref<string | null>(null) // Removed pagination
-// const hasMore = ref(true) // Removed pagination
-const isLoading = ref(false)
-const isInitialLoad = ref(true)
+const isInitialLoad = ref(true) // Deprecated really, but keeping for template compat if needed or mapping to status
 
 // Search and filter state
 const searchQuery = ref('')
+const activeSearch = ref('') // Debounced
 const selectedPhilosopher = ref<string | null>(null)
 const philosophers = ref<Philosopher[]>([])
 
-// Fetch philosophers for filter dropdown
+// Fetch philosophers for filter dropdown (Client-side is fine for this secondary data)
 async function fetchPhilosophers() {
   try {
     const response = await $fetch<PhilosophersResponse>('/api/graphql', {
       method: 'POST',
       body: {
-        query: `
-          query GetPhilosophers {
-            philosophers {
-              id
-              name
-              slug
-            }
-          }
-        `
+        query: `query GetPhilosophers { philosophers { id name slug } }`
       }
     })
     if (response.data?.philosophers) {
       philosophers.value = response.data.philosophers
     }
   } catch (error) {
-    // Log for debugging - non-critical failure
     if (import.meta.dev) console.warn('Failed to fetch philosophers:', error)
   }
 }
 
-// Fetch conversations - Fixed limit, no pagination
-async function fetchFeed(reset = false) { // reset is effectively just "refresh" now
-  if (isLoading.value) return
-
-  if (reset) {
-    conversations.value = []
-    // cursor.value = null
-    // hasMore.value = true
-  }
-
-  isLoading.value = true
-
-  try {
-    const response = await $fetch<FeedResponse>('/api/graphql', {
-      method: 'POST',
-      body: {
-        query: `
-          query Feed($limit: Int, $search: String, $philosopherSlug: String) {
-            feed(limit: $limit, search: $search, philosopherSlug: $philosopherSlug) {
-              edges {
-                id
-                title
-                summary
-                viewCount
-                createdAt
-                likeCount
-                forkCount
-                isAnonymous
-                isLikedByMe
-                user {
-                  id
-                  username
-                  name
-                  avatar
-                }
-                philosopher {
-                  id
-                  name
-                  slug
-                  portrait
-                }
-              }
-              pageInfo {
-                hasNextPage
-                endCursor
-              }
-            }
-          }
-        `,
-        variables: {
-          // cursor: cursor.value,
-          limit: 50, // Fixed limit as requested
-          search: searchQuery.value || null,
-          philosopherSlug: selectedPhilosopher.value || null
-        }
-      }
-    })
-
-    if (response.data?.feed) {
-      // Just replace or append? Since we removed pagination, we likely just want the top 50.
-      // If we are "refreshing" (reset=true), we replace.
-      // If we are just loading initially, we replace.
-      conversations.value = response.data.feed.edges
-      // cursor.value = response.data.feed.pageInfo.endCursor
-      // hasMore.value = response.data.feed.pageInfo.hasNextPage
-    }
-  } catch (error) {
-    // Log for debugging - non-critical failure
-    if (import.meta.dev) console.warn('Failed to fetch feed:', error)
-  } finally {
-    isLoading.value = false
-    isInitialLoad.value = false
-  }
-}
-
-// Debounced search
+// Debounce Search
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 function onSearchInput() {
   if (searchTimeout) clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
-    fetchFeed(true)
+    activeSearch.value = searchQuery.value
   }, 400)
 }
 
-// Filter by philosopher
-function onPhilosopherChange() {
-  fetchFeed(true)
-}
-
-// Clear all filters
 function clearFilters() {
-  searchQuery.value = ''
+  searchQuery.value = '' // Reset
+  activeSearch.value = ''
   selectedPhilosopher.value = null
-  fetchFeed(true)
+  // No explicit fetch needed, watchers handle it
 }
 
-// Infinite scroll removed
-// const canLoadMore = computed(() => hasMore.value && !isLoading.value)
-// const { triggerRef: loadMoreTrigger } = useInfiniteScroll(
-//   () => fetchFeed(),
-//   { enabled: canLoadMore }
-// )
+// SSR Feed Fetching
+const { data: feedData, status } = await useFetch<FeedResponse>('/api/graphql', {
+  method: 'POST',
+  body: computed(() => ({
+    query: `
+      query Feed($limit: Int, $search: String, $philosopherSlug: String) {
+        feed(limit: $limit, search: $search, philosopherSlug: $philosopherSlug) {
+          edges {
+            id title summary viewCount createdAt likeCount forkCount
+            isAnonymous isLikedByMe
+            user { id username name avatar }
+            philosopher { id name slug portrait }
+          }
+        }
+      }
+    `,
+    variables: {
+      limit: 50,
+      search: activeSearch.value || null,
+      philosopherSlug: selectedPhilosopher.value || null
+    }
+  })),
+  watch: [activeSearch, selectedPhilosopher]
+})
 
-// Load initial data
+const conversations = computed(() => feedData.value?.data?.feed?.edges || [])
+const isLoading = computed(() => status.value === 'pending')
+
+// Load initial secondary data
 onMounted(() => {
   fetchPhilosophers()
-
-  // No cached state to restore - fetch fresh
-  fetchFeed(true)
+  isInitialLoad.value = false
 })
 
 const showForkModal = ref(false)
@@ -241,7 +168,7 @@ function onFork(conversation: Conversation) {
           searchable-placeholder="Search thinkers..."
           placeholder="Filter by thinker"
           class="w-full sm:w-64"
-          @update:model-value="onPhilosopherChange"
+
         />
         <UButton
           v-if="searchQuery || selectedPhilosopher"
@@ -256,7 +183,7 @@ function onFork(conversation: Conversation) {
 
       <!-- Loading State -->
       <div
-        v-if="isInitialLoad"
+        v-if="isLoading && conversations.length === 0"
         class="flex justify-center py-20"
       >
         <UIcon
@@ -271,9 +198,10 @@ function onFork(conversation: Conversation) {
         class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
       >
         <ConversationCard
-          v-for="conv in conversations"
+          v-for="(conv, index) in conversations"
           :key="conv.id"
           :conversation="conv"
+          :preload-image="index < 6"
           @fork="onFork"
         />
 
@@ -282,7 +210,7 @@ function onFork(conversation: Conversation) {
 
       <!-- Empty State -->
       <div
-        v-if="conversations.length === 0 && !isInitialLoad"
+        v-if="conversations.length === 0 && !isLoading"
         class="text-center py-20"
       >
         <UIcon
