@@ -68,6 +68,7 @@ interface Conversation {
   philosopher: Philosopher
   likeCount: number
   isLikedByMe: boolean
+  commentCount?: number
 }
 
 // Helpers
@@ -81,6 +82,7 @@ const createEmptyConversation = (): Conversation => ({
   forkCount: 0,
   likeCount: 0,
   isLikedByMe: false,
+  commentCount: 0,
   messages: [],
   philosopher: { ...emptyPhilosopher }
 })
@@ -138,7 +140,7 @@ const { data: fetchedData, status, error } = await useAsyncData(
       body: {
         query: `query GetConversation($id: ID!) {
           conversation(id: $id) {
-            id title isPublic isAnonymous createdAt forkCount
+            id title isPublic isAnonymous createdAt forkCount commentCount
             user { id name username avatar }
             forkedFrom { id title user { name } }
             likeCount isLikedByMe
@@ -546,6 +548,17 @@ onUnmounted(() => socket.value?.disconnect())
               <span class="hidden sm:inline">{{ conversation.forkCount > 0 ? conversation.forkCount : '' }}</span>
               <span class="sm:hidden">{{ conversation.forkCount > 0 ? conversation.forkCount : '' }}</span>
             </UButton>
+
+            <UButton
+              v-if="!isNewConversation && conversation.isPublic"
+              :to="`/conversation/${conversation.id}/comments`"
+              variant="ghost"
+              color="neutral"
+              icon="i-lucide-message-circle"
+              size="xs"
+            >
+              <span v-if="(conversation.commentCount || 0) > 0">{{ conversation.commentCount }}</span>
+            </UButton>
           </div>
         </div>
       </header>
@@ -790,17 +803,6 @@ onUnmounted(() => socket.value?.disconnect())
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Comment Section (for public conversations only) -->
-      <div
-        v-if="!isNewConversation && conversation.isPublic"
-        class="max-w-3xl mx-auto px-4 py-6"
-      >
-        <CommentSection
-          :conversation-id="conversation.id"
-          :is-public="conversation.isPublic"
-        />
       </div>
 
       <!-- Input or Fork CTA -->
