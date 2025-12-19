@@ -128,14 +128,22 @@ export async function generateConversationTitle(
       .map(m => `${m.role === 'user' ? 'User' : philosopherName}: ${m.content}`)
       .join('\n\n')
 
-    const prompt = `Create a short, intriguing, philosophical title (max 6 words) for this conversation between a user and ${philosopherName}. Do not use quotes. Do not use "Conversation with".
-    
+    const prompt = `Create a short, intriguing, philosophical title (max 6 words) for this conversation between a user and ${philosopherName}. 
+RULES:
+1. Return ONLY the title text.
+2. Do NOT include "Here are some options" or any conversational filler.
+3. Do NOT provide multiple options.
+4. Do NOT use quotes.
+5. Do NOT use "Conversation with".
+
+Conversation:
 ${conversationText}
 
 Title:`
 
     const title = await getLLMProvider().generate(prompt, CONFIG.REQUEST_TIMEOUT)
-    return title.replace(/^["']|["']$/g, '').trim() // Remove quotes if any
+    // Clean up potential noise if LLM ignores rules
+    return (title.split('\n')[0] || '').replace(/^["'*]+|["'*]+$/g, '').replace(/^Title:\s*/i, '').trim()
   } catch (error) {
     console.error('[LLM] Failed to generate title:', error)
     return ''

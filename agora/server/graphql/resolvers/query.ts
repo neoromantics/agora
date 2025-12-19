@@ -265,7 +265,7 @@ export const queryResolvers = {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          _count: { select: { conversations: true } }
+          _count: { select: { conversations: { where: { deletedAt: null } } } }
         }
       })
 
