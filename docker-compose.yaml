@@ -94,6 +94,7 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       NUXT_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       NUXT_PUBLIC_BASE_URL: /agora
+      NUXT_APP_BASE_URL: /agora
     depends_on:
       postgres:
         condition: service_healthy
