@@ -130,7 +130,12 @@ definePageMeta({
           name="i-lucide-search-x"
           class="w-12 h-12 mx-auto mb-4 opacity-50"
         />
-        <p>No thinkers found matching "{{ searchQuery }}"</p>
+        <p>
+          No thinkers found
+          <span v-if="searchQuery.trim()">
+            matching "{{ searchQuery }}"
+          </span>
+        </p>
       </div>
 
       <!-- Gallery Grid -->
