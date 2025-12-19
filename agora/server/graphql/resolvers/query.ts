@@ -173,13 +173,13 @@ export const queryResolvers = {
 
       const where: any = {
         userId: user.id,
-        deletedAt: null
+        deletedAt: null,
+        isPublic: true // Always show only public conversations in profile
       }
 
-      // If not owner and not admin, show only public
+      // If not owner and not admin, also hide anonymous conversations
       const isAdmin = currentUser?.role === 'ADMIN'
       if ((!currentUser || currentUser.id !== user.id) && !isAdmin) {
-        where.isPublic = true
         where.isAnonymous = false
       }
 
