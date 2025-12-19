@@ -66,6 +66,8 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2025-01-15',
 
+  // Nuxt Image - using default ipx provider
+
   // Nitro server configuration
   nitro: {
 

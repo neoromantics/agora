@@ -20,7 +20,7 @@ const { data: conversationData, error } = await useAsyncData(
     }
 
     const response = await $fetch<{
-      data?: { conversation?: { id: string, title: string, isPublic: boolean, philosopher: { name: string, slug: string, portrait: string } } }
+      data?: { conversation?: { id: string, title: string, isPublic: boolean, userId: string, philosopher: { name: string, slug: string, portrait: string } } }
       errors?: { message: string }[]
     }>('/api/graphql', {
       method: 'POST',
@@ -28,7 +28,7 @@ const { data: conversationData, error } = await useAsyncData(
       body: {
         query: `query GetConversation($id: ID!) {
           conversation(id: $id) {
-            id title isPublic
+            id title isPublic userId
             philosopher { name slug portrait }
           }
         }`,
@@ -56,7 +56,9 @@ if (error.value) {
   })
 }
 
+const { user } = useAuth()
 const conversation = computed(() => conversationData.value)
+const isOwner = computed(() => conversation.value?.userId === user.value?.id)
 </script>
 
 <template>
@@ -106,6 +108,7 @@ const conversation = computed(() => conversationData.value)
         <CommentSection
           :conversation-id="conversationId"
           :is-public="conversation.isPublic"
+          :is-owner="isOwner"
         />
       </div>
     </UContainer>

@@ -40,6 +40,7 @@ export const typeDefs = /* GraphQL */ `
     forkCount: Int!
     createdAt: DateTime!
     updatedAt: DateTime!
+    userId: String!
     user: User
     philosopher: Philosopher!
     messages(limit: Int): [Message!]!
@@ -84,6 +85,7 @@ export const typeDefs = /* GraphQL */ `
   type SendMessageResult {
     userMessage: Message!
     philosopherMessage: Message!
+    newConversationTitle: String
   }
 
   type Query {

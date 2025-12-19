@@ -127,6 +127,7 @@ const { data: fetchedData, status, error } = await useAsyncData(
 
       const draft = createEmptyConversation()
       draft.philosopher = response.data.philosopher
+      draft.title = `Conversation with ${response.data.philosopher.name}`
       return { conversation: draft }
     }
 
@@ -384,7 +385,7 @@ async function sendMessage() {
       }
     }
 
-    const sendResponse = await $fetch<{ data?: { sendMessage?: { userMessage: Message, philosopherMessage: Message } }, errors?: Array<{ message: string }> }>('/api/graphql', {
+    const sendResponse = await $fetch<{ data?: { sendMessage?: { userMessage: Message, philosopherMessage: Message, newConversationTitle?: string } }, errors?: Array<{ message: string }> }>('/api/graphql', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: {
@@ -392,6 +393,7 @@ async function sendMessage() {
           sendMessage(conversationId: $conversationId, content: $content) {
             userMessage { id role content createdAt }
             philosopherMessage { id role content createdAt }
+            newConversationTitle
           }
         }`,
         variables: { conversationId: conversation.value.id, content }
@@ -400,10 +402,19 @@ async function sendMessage() {
 
     if (sendResponse.errors?.length) throw new Error(sendResponse.errors[0]?.message)
     if (sendResponse.data?.sendMessage) {
-      const { userMessage, philosopherMessage } = sendResponse.data.sendMessage
+      const { userMessage, philosopherMessage, newConversationTitle } = sendResponse.data.sendMessage
       const idx = conversation.value.messages.findIndex(m => m.id === optimisticMessage.id)
       if (idx !== -1) conversation.value.messages[idx] = userMessage
       if (!conversation.value.messages.find(m => m.id === philosopherMessage.id)) conversation.value.messages.push(philosopherMessage)
+
+      // Update title if changed - preserve scroll position
+      if (newConversationTitle) {
+        const scrollY = window.scrollY
+        conversation.value.title = newConversationTitle
+        nextTick(() => {
+          window.scrollTo(0, scrollY)
+        })
+      }
 
       if (wasCreated) {
         await router.replace(`/conversation/${conversation.value.id}`)
@@ -616,7 +627,7 @@ async function deleteConversation() {
           class="max-w-3xl mx-auto mb-8 text-center"
         >
           <h1
-            class="text-3xl font-serif font-bold text-stone-900 dark:text-stone-100 mb-2 transition-colors"
+            class="text-3xl font-serif font-bold text-stone-900 dark:text-stone-100 mb-2 transition-colors min-h-[2.5rem]"
             :class="{ 'cursor-pointer hover:text-primary-500 hover:underline': isOwner }"
             :title="isOwner ? 'Click to edit title' : ''"
             @click="isOwner ? openEditTitle() : null"

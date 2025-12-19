@@ -22,6 +22,7 @@ interface Comment {
 const props = defineProps<{
   conversationId: string
   isPublic: boolean
+  isOwner?: boolean
 }>()
 
 const { token, user } = useAuth()
@@ -162,7 +163,7 @@ watch(() => props.conversationId, (newId) => {
 
     <!-- Add Comment Form -->
     <div
-      v-if="token && isPublic"
+      v-if="token && (isPublic || isOwner)"
       class="mb-6"
     >
       <form
@@ -214,7 +215,7 @@ watch(() => props.conversationId, (newId) => {
 
     <!-- Private Notice -->
     <div
-      v-else-if="!isPublic"
+      v-else-if="!isPublic && !isOwner"
       class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-center"
     >
       <p class="text-sm text-amber-700 dark:text-amber-300">

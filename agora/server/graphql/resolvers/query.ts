@@ -6,10 +6,11 @@ import type { Context } from '../context'
 
 const formatPhilosopher = (p: any) => {
   if (!p) return null
+  // Return path without baseUrl - Nuxt Image/IPX will add the base correctly
   return {
     ...p,
     era: p.era || 'Unknown Era',
-    portrait: p.portrait || '',
+    portrait: p.portrait ? `/api/img/philosopher/${p.id}` : '',
     conversationCount: p._count?.conversations || 0
   }
 }
@@ -264,13 +265,23 @@ export const queryResolvers = {
       const users = await prisma.user.findMany({
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          username: true,
+          bio: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+          avatar: true,
           _count: { select: { conversations: { where: { deletedAt: null } } } }
         }
       })
 
       return users.map(u => ({
         ...u,
+        avatar: u.avatar ? `/api/img/user/${u.id}` : '',
         conversationCount: u._count.conversations
       }))
     },
@@ -312,8 +323,20 @@ export const queryResolvers = {
       return {
         edges: edges.map((c: any) => ({
           ...c,
+          user: c.user
+            ? {
+              ...c.user,
+              avatar: c.user.avatar ? `/api/img/user/${c.user.id}` : ''
+            }
+            : null,
+          philosopher: c.philosopher
+            ? {
+              ...c.philosopher,
+              portrait: c.philosopher.portrait ? `/api/img/philosopher/${c.philosopher.id}` : ''
+            }
+            : null,
           likeCount: c._count.likes,
-          isLikedByMe: false // Not relevant for admin view
+          isLikedByMe: false
         })),
         pageInfo: {
           hasNextPage,

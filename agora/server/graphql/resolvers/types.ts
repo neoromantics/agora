@@ -79,19 +79,24 @@ export const typeResolvers = {
     },
     likeCount: async (parent: any) => {
       if (parent.likeCount !== undefined) return parent.likeCount
-      const count = await prisma.commentLike.count({
-        where: { commentId: parent.id }
+      const commentWithCount = await prisma.comment.findUnique({
+        where: { id: parent.id },
+        include: { _count: { select: { likes: true } } }
       })
-      return count
+      return commentWithCount?._count.likes || 0
     },
     isLikedByMe: async (parent: any, _: unknown, context: Context) => {
       if (parent.isLikedByMe !== undefined) return parent.isLikedByMe
       const currentUser = await getCurrentUser(context.event)
       if (!currentUser) return false
-      const like = await prisma.commentLike.findUnique({
-        where: { userId_commentId: { userId: currentUser.id, commentId: parent.id } }
+
+      const count = await prisma.comment.count({
+        where: {
+          id: parent.id,
+          likes: { some: { userId: currentUser.id } }
+        }
       })
-      return !!like
+      return count > 0
     }
   }
 }

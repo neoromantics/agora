@@ -242,12 +242,15 @@ export const mutationResolvers = {
       })
 
       // Background: Check if we should update the title
+      let newTitle: string | null = null
       if (conversation.title.startsWith('Conversation with') && conversation.messages.length < 2) {
-        generateConversationTitle(conversation.philosopher.name, [
-          ...conversation.messages.map(m => ({ role: m.role, content: m.content })),
-          { role: 'user', content },
-          { role: 'philosopher', content: philosopherResponse }
-        ]).then(async (newTitle) => {
+        try {
+          newTitle = await generateConversationTitle(conversation.philosopher.name, [
+            ...conversation.messages.map(m => ({ role: m.role, content: m.content })),
+            { role: 'user', content },
+            { role: 'philosopher', content: philosopherResponse }
+          ])
+
           if (newTitle) {
             await prisma.conversation.update({
               where: { id: conversationId },
@@ -257,10 +260,12 @@ export const mutationResolvers = {
               io.to(`conversation:${conversationId}`).emit('conversation:updated', { title: newTitle })
             }
           }
-        }).catch(err => console.error('[Conversation] Failed to auto-title:', err))
+        } catch (err) {
+          console.error('[Conversation] Failed to auto-title:', err)
+        }
       }
 
-      return { userMessage, philosopherMessage: botMessage }
+      return { userMessage, philosopherMessage: botMessage, newConversationTitle: newTitle }
     },
 
     togglePublic: async (_: unknown, { conversationId }: { conversationId: string }, context: Context) => {
@@ -587,26 +592,36 @@ export const mutationResolvers = {
         throw new Error('Comment not found')
       }
 
-      // Check if already liked
-      const existingLike = await prisma.commentLike.findUnique({
-        where: { userId_commentId: { userId: user.id, commentId } }
-      })
-
-      if (existingLike) {
-        throw new Error('Already liked this comment')
+      // Using update on comment to create the like via relation
+      // This bypasses accessing prisma.commentLike directly which seems to be undefined
+      try {
+        await prisma.comment.update({
+          where: { id: commentId },
+          data: {
+            likes: {
+              create: { userId: user.id }
+            }
+          }
+        })
+      } catch (e: any) {
+        // Prisma error code P2002 means unique constraint failed (already liked)
+        if (e.code === 'P2002') {
+          throw new Error('Already liked this comment')
+        }
+        throw e
       }
 
-      await prisma.commentLike.create({
-        data: { userId: user.id, commentId }
-      })
-
-      const likeCount = await prisma.commentLike.count({
-        where: { commentId }
+      const updated = await prisma.comment.findUnique({
+        where: { id: commentId },
+        include: {
+          user: true,
+          _count: { select: { likes: true } }
+        }
       })
 
       return {
-        ...comment,
-        likeCount,
+        ...updated,
+        likeCount: updated?._count.likes || 0,
         isLikedByMe: true
       }
     },
@@ -623,17 +638,26 @@ export const mutationResolvers = {
         throw new Error('Comment not found')
       }
 
-      await prisma.commentLike.deleteMany({
-        where: { userId: user.id, commentId }
+      await prisma.comment.update({
+        where: { id: commentId },
+        data: {
+          likes: {
+            deleteMany: { userId: user.id }
+          }
+        }
       })
 
-      const likeCount = await prisma.commentLike.count({
-        where: { commentId }
+      const updated = await prisma.comment.findUnique({
+        where: { id: commentId },
+        include: {
+          user: true,
+          _count: { select: { likes: true } }
+        }
       })
 
       return {
-        ...comment,
-        likeCount,
+        ...updated,
+        likeCount: updated?._count?.likes || 0,
         isLikedByMe: false
       }
     },

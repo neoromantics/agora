@@ -85,7 +85,13 @@ export async function getCurrentUser(event: H3Event) {
     }
   })
 
-  return user
+  if (!user) return null
+
+  // Transform avatar to URL path to prevent large Base64 in cookies
+  return {
+    ...user,
+    avatar: user.avatar ? `/api/img/user/${user.id}` : null
+  }
 }
 
 /**
