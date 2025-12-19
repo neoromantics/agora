@@ -463,6 +463,164 @@ export const mutationResolvers = {
       }
     },
 
+    // ===== Comment Mutations =====
+
+    addComment: async (_: unknown, { conversationId, content, parentId }: { conversationId: string, content: string, parentId?: string }, context: Context) => {
+      const user = await requireAuth(context.event)
+
+      // Validate content
+      if (!content.trim()) {
+        throw new Error('Comment cannot be empty')
+      }
+
+      if (content.length > 2000) {
+        throw new Error('Comment is too long (max 2000 characters)')
+      }
+
+      // Verify conversation exists and is public (or user is owner/admin)
+      const conversation = await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        include: { philosopher: true }
+      })
+
+      if (!conversation || conversation.deletedAt) {
+        throw new Error('Conversation not found')
+      }
+
+      if (!conversation.isPublic && conversation.userId !== user.id && user.role !== 'ADMIN') {
+        throw new Error('Cannot comment on private conversations')
+      }
+
+      // If parentId provided, verify parent comment exists and belongs to same conversation
+      if (parentId) {
+        const parentComment = await prisma.comment.findUnique({
+          where: { id: parentId }
+        })
+        if (!parentComment || parentComment.conversationId !== conversationId) {
+          throw new Error('Parent comment not found')
+        }
+      }
+
+      // Create comment
+      const comment = await prisma.comment.create({
+        data: {
+          content: content.trim(),
+          userId: user.id,
+          conversationId,
+          parentId: parentId || null
+        },
+        include: { user: true }
+      })
+
+      // Create notification for conversation owner (if not self and not replying)
+      if (conversation.userId !== user.id && !parentId) {
+        await prisma.notification.create({
+          data: {
+            userId: conversation.userId,
+            type: 'COMMENT',
+            conversationId,
+            actorId: user.id,
+            message: `${user.name} commented on your conversation with ${conversation.philosopher.name}`
+          }
+        })
+      }
+
+      return {
+        ...comment,
+        likeCount: 0,
+        isLikedByMe: false
+      }
+    },
+
+    deleteComment: async (_: unknown, { commentId }: { commentId: string }, context: Context) => {
+      const user = await requireAuth(context.event)
+
+      const comment = await prisma.comment.findUnique({
+        where: { id: commentId }
+      })
+
+      if (!comment) {
+        throw new Error('Comment not found')
+      }
+
+      // Only owner or admin can delete
+      if (comment.userId !== user.id && user.role !== 'ADMIN') {
+        throw new Error('Not authorized to delete this comment')
+      }
+
+      // Cascade delete happens automatically via Prisma schema
+      await prisma.comment.delete({
+        where: { id: commentId }
+      })
+
+      return true
+    },
+
+    likeComment: async (_: unknown, { commentId }: { commentId: string }, context: Context) => {
+      const user = await requireAuth(context.event)
+
+      const comment = await prisma.comment.findUnique({
+        where: { id: commentId },
+        include: { user: true }
+      })
+
+      if (!comment) {
+        throw new Error('Comment not found')
+      }
+
+      // Check if already liked
+      const existingLike = await prisma.commentLike.findUnique({
+        where: { userId_commentId: { userId: user.id, commentId } }
+      })
+
+      if (existingLike) {
+        throw new Error('Already liked this comment')
+      }
+
+      await prisma.commentLike.create({
+        data: { userId: user.id, commentId }
+      })
+
+      const likeCount = await prisma.commentLike.count({
+        where: { commentId }
+      })
+
+      return {
+        ...comment,
+        likeCount,
+        isLikedByMe: true
+      }
+    },
+
+    unlikeComment: async (_: unknown, { commentId }: { commentId: string }, context: Context) => {
+      const user = await requireAuth(context.event)
+
+      const comment = await prisma.comment.findUnique({
+        where: { id: commentId },
+        include: { user: true }
+      })
+
+      if (!comment) {
+        throw new Error('Comment not found')
+      }
+
+      await prisma.commentLike.deleteMany({
+        where: { userId: user.id, commentId }
+      })
+
+      const likeCount = await prisma.commentLike.count({
+        where: { commentId }
+      })
+
+      return {
+        ...comment,
+        likeCount,
+        isLikedByMe: false
+      }
+    },
+
+    // ===== End Comment Mutations =====
+
     updateProfile: async (_: unknown, args: any, context: Context) => {
       const user = await requireAuth(context.event)
       const { name, bio, avatar, username, currentPassword, newPassword } = args
@@ -552,6 +710,13 @@ export const mutationResolvers = {
       applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
       await prisma.user.delete({ where: { id: userId } })
+      return true
+    },
+
+    adminDeleteComment: async (_: unknown, { commentId }: { commentId: string }, context: Context) => {
+      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await requireAdmin(context.event)
+      await prisma.comment.delete({ where: { id: commentId } })
       return true
     },
 
