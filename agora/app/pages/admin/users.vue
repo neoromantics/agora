@@ -16,6 +16,7 @@ interface AdminUser {
   email: string
   role: 'USER' | 'ADMIN' | 'MODERATOR'
   avatar: string
+  bio?: string
   createdAt: string
   conversationCount: number
 }
@@ -35,6 +36,7 @@ const { data: users, refresh, status, error } = await useAsyncData('admin-users'
             email
             role
             avatar
+            bio
             createdAt
             conversationCount
           }
@@ -152,6 +154,118 @@ async function executeDelete() {
     userToDelete.value = null
   }
 }
+
+// --- Create/Edit User ---
+const isEditModalOpen = ref(false)
+const isCreating = ref(false)
+const isSavingUser = ref(false)
+const editingUser = ref<AdminUser | null>(null)
+const userForm = reactive({
+  name: '',
+  username: '',
+  email: '',
+  bio: '',
+  avatar: '',
+  role: 'USER',
+  password: ''
+})
+
+function openCreateModal() {
+  editingUser.value = null
+  isCreating.value = true
+  userForm.name = ''
+  userForm.username = ''
+  userForm.email = ''
+  userForm.bio = ''
+  userForm.avatar = ''
+  userForm.role = 'USER'
+  userForm.password = ''
+  isEditModalOpen.value = true
+}
+
+function openEditModal(user: AdminUser) {
+  editingUser.value = user
+  isCreating.value = false
+  userForm.name = user.name
+  userForm.username = user.username
+  userForm.email = user.email
+  userForm.bio = user.bio || ''
+  userForm.avatar = user.avatar || ''
+  userForm.role = user.role
+  userForm.password = '' // Don't show existing password
+  isEditModalOpen.value = true
+}
+
+async function saveUser() {
+  isSavingUser.value = true
+  try {
+    if (isCreating.value) {
+      // Create new user
+      if (!userForm.password) {
+        throw new Error('Password is required for new users')
+      }
+      const { errors } = await $fetch<{ errors?: { message: string }[] }>('/api/graphql', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token.value}` },
+        body: {
+          query: `
+            mutation AdminCreateUser($email: String!, $password: String!, $name: String!, $username: String!, $role: String) {
+              adminCreateUser(email: $email, password: $password, name: $name, username: $username, role: $role) {
+                id
+              }
+            }
+          `,
+          variables: {
+            email: userForm.email,
+            password: userForm.password,
+            name: userForm.name,
+            username: userForm.username,
+            role: userForm.role
+          }
+        }
+      })
+      if (errors?.length) throw new Error(errors[0]!.message)
+      toast.add({ title: 'User created', color: 'success' })
+    } else {
+      // Update existing user
+      const variables: Record<string, string | undefined> = {
+        userId: editingUser.value!.id,
+        name: userForm.name,
+        username: userForm.username,
+        email: userForm.email,
+        bio: userForm.bio,
+        avatar: userForm.avatar,
+        role: userForm.role
+      }
+      if (userForm.password) {
+        variables.newPassword = userForm.password
+      }
+      const { errors } = await $fetch<{ errors?: { message: string }[] }>('/api/graphql', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token.value}` },
+        body: {
+          query: `
+            mutation AdminUpdateUser($userId: ID!, $name: String, $username: String, $email: String, $bio: String, $avatar: String, $role: String, $newPassword: String) {
+              adminUpdateUser(userId: $userId, name: $name, username: $username, email: $email, bio: $bio, avatar: $avatar, role: $role, newPassword: $newPassword) {
+                id
+              }
+            }
+          `,
+          variables
+        }
+      })
+      if (errors?.length) throw new Error(errors[0]!.message)
+      toast.add({ title: 'User updated', color: 'success' })
+    }
+    isEditModalOpen.value = false
+    refresh()
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Unknown error'
+    toast.add({ title: 'Error', description: message, color: 'error' })
+  } finally {
+    isSavingUser.value = false
+  }
+}
 </script>
 
 <template>
@@ -167,7 +281,7 @@ async function executeDelete() {
           Manage platform members and permissions
         </p>
       </div>
-      <div class="w-full sm:w-auto">
+      <div class="w-full sm:w-auto flex gap-2">
         <UInput
           v-model="searchQuery"
           icon="i-lucide-search"
@@ -175,6 +289,14 @@ async function executeDelete() {
           size="sm"
           class="min-w-[200px] w-full"
         />
+        <UButton
+          icon="i-lucide-user-plus"
+          color="primary"
+          size="sm"
+          @click="openCreateModal"
+        >
+          Create
+        </UButton>
       </div>
     </div>
 
@@ -251,7 +373,15 @@ async function executeDelete() {
           </div>
 
           <!-- Footer Actions -->
-          <div class="p-3 border-t border-stone-100 dark:border-stone-800 flex justify-end bg-stone-50/30 dark:bg-stone-800/10">
+          <div class="p-3 border-t border-stone-100 dark:border-stone-800 flex justify-end gap-2 bg-stone-50/30 dark:bg-stone-800/10">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-pencil"
+              size="xs"
+              label="Edit"
+              @click="openEditModal(user)"
+            />
             <UButton
               color="error"
               variant="ghost"
@@ -377,6 +507,134 @@ async function executeDelete() {
             </div>
           </div>
         </UCard>
+      </template>
+    </UModal>
+
+    <!-- Create/Edit User Modal -->
+    <UModal v-model:open="isEditModalOpen">
+      <template #content>
+        <ClientOnly>
+          <UCard>
+            <template #header>
+              <h3 class="text-lg font-bold text-stone-900 dark:text-stone-100">
+                {{ isCreating ? 'Create User' : 'Edit User' }}
+              </h3>
+            </template>
+
+            <div class="p-4 space-y-4">
+              <!-- Avatar Preview -->
+              <div class="flex items-center gap-4 pb-4 border-b border-stone-200 dark:border-stone-700">
+                <UAvatar
+                  :src="userForm.avatar || undefined"
+                  :alt="userForm.name"
+                  size="xl"
+                />
+                <div class="flex-1">
+                  <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
+                    Avatar URL
+                  </label>
+                  <UInput
+                    v-model="userForm.avatar"
+                    placeholder="https://..."
+                    size="sm"
+                  />
+                </div>
+              </div>
+
+              <!-- Name -->
+              <div>
+                <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
+                  Name *
+                </label>
+                <UInput
+                  v-model="userForm.name"
+                  placeholder="Display name"
+                />
+              </div>
+
+              <!-- Username -->
+              <div>
+                <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
+                  Username *
+                </label>
+                <UInput
+                  v-model="userForm.username"
+                  placeholder="username"
+                >
+                  <template #leading>
+                    <span class="text-stone-400">@</span>
+                  </template>
+                </UInput>
+              </div>
+
+              <!-- Email -->
+              <div>
+                <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
+                  Email *
+                </label>
+                <UInput
+                  v-model="userForm.email"
+                  type="email"
+                  placeholder="email@example.com"
+                />
+              </div>
+
+              <!-- Bio -->
+              <div>
+                <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
+                  Bio
+                </label>
+                <UTextarea
+                  v-model="userForm.bio"
+                  placeholder="About this user..."
+                  :rows="2"
+                />
+              </div>
+
+              <!-- Role -->
+              <div>
+                <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
+                  Role
+                </label>
+                <USelect
+                  v-model="userForm.role"
+                  :items="roleOptions"
+                  value-key="value"
+                  label-key="label"
+                />
+              </div>
+
+              <!-- Password -->
+              <div>
+                <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
+                  {{ isCreating ? 'Password *' : 'New Password (leave blank to keep current)' }}
+                </label>
+                <UInput
+                  v-model="userForm.password"
+                  type="password"
+                  :placeholder="isCreating ? 'Required' : 'Optional'"
+                />
+              </div>
+            </div>
+
+            <template #footer>
+              <div class="flex justify-end gap-3">
+                <UButton
+                  label="Cancel"
+                  color="neutral"
+                  variant="ghost"
+                  @click="isEditModalOpen = false"
+                />
+                <UButton
+                  :label="isCreating ? 'Create User' : 'Save Changes'"
+                  color="primary"
+                  :loading="isSavingUser"
+                  @click="saveUser"
+                />
+              </div>
+            </template>
+          </UCard>
+        </ClientOnly>
       </template>
     </UModal>
   </div>

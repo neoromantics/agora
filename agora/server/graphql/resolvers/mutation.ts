@@ -713,6 +713,81 @@ export const mutationResolvers = {
       return true
     },
 
+    adminCreateUser: async (_: unknown, args: { email: string, password: string, name: string, username: string, role?: string }, context: Context) => {
+      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await requireAdmin(context.event)
+
+      const { email, password, name, username, role = 'USER' } = args
+
+      // Validate role
+      if (!['USER', 'MODERATOR', 'ADMIN'].includes(role)) {
+        throw new Error('Invalid role')
+      }
+
+      // Check if email or username already exists
+      const existing = await prisma.user.findFirst({
+        where: { OR: [{ email }, { username }] }
+      })
+      if (existing) {
+        throw new Error(existing.email === email ? 'Email already in use' : 'Username already taken')
+      }
+
+      // Hash password
+      const hashedPassword = await hashPassword(password)
+
+      return prisma.user.create({
+        data: {
+          email,
+          passwordHash: hashedPassword,
+          name,
+          username,
+          role: role as Role
+        }
+      })
+    },
+
+    adminUpdateUser: async (_: unknown, args: { userId: string, name?: string, username?: string, email?: string, bio?: string, avatar?: string, role?: string, newPassword?: string }, context: Context) => {
+      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await requireAdmin(context.event)
+
+      const { userId, newPassword, role, ...profileData } = args
+
+      // Check user exists
+      const user = await prisma.user.findUnique({ where: { id: userId } })
+      if (!user) {
+        throw new Error('User not found')
+      }
+
+      // Check uniqueness of username/email if changed
+      if (profileData.username && profileData.username !== user.username) {
+        const existing = await prisma.user.findFirst({ where: { username: profileData.username } })
+        if (existing) throw new Error('Username already taken')
+      }
+      if (profileData.email && profileData.email !== user.email) {
+        const existing = await prisma.user.findFirst({ where: { email: profileData.email } })
+        if (existing) throw new Error('Email already in use')
+      }
+
+      // Build update data
+      const updateData: any = {}
+      if (profileData.name) updateData.name = profileData.name
+      if (profileData.username) updateData.username = profileData.username
+      if (profileData.email) updateData.email = profileData.email
+      if (profileData.bio !== undefined) updateData.bio = profileData.bio
+      if (profileData.avatar !== undefined) updateData.avatar = profileData.avatar
+      if (role && ['USER', 'MODERATOR', 'ADMIN'].includes(role)) {
+        updateData.role = role as Role
+      }
+      if (newPassword) {
+        updateData.passwordHash = await hashPassword(newPassword)
+      }
+
+      return prisma.user.update({
+        where: { id: userId },
+        data: updateData
+      })
+    },
+
     adminDeleteComment: async (_: unknown, { commentId }: { commentId: string }, context: Context) => {
       applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)

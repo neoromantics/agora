@@ -187,6 +187,8 @@ export const typeDefs = /* GraphQL */ `
     adminDeleteConversation(conversationId: ID!): Boolean!
     adminDeleteComment(commentId: ID!): Boolean!
     adminDeleteUser(userId: ID!): Boolean!
+    adminCreateUser(email: String!, password: String!, name: String!, username: String!, role: String): User!
+    adminUpdateUser(userId: ID!, name: String, username: String, email: String, bio: String, avatar: String, role: String, newPassword: String): User!
     updateUserRole(userId: ID!, role: String!): User!
     
     # Philosopher Management (Admin)
