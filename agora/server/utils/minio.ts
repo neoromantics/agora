@@ -85,21 +85,37 @@ export async function uploadImage(
  * Get an image from MinIO
  * @returns Buffer and content type
  */
-export async function getImage(key: string): Promise<{ buffer: Buffer, contentType: string }> {
+/**
+ * Get an image stream from MinIO
+ */
+export async function getImageStream(key: string): Promise<{ stream: NodeJS.ReadableStream, contentType: string }> {
   const client = getMinioClient()
   const bucket = getMinioBucket()
 
   const stream = await client.getObject(bucket, key)
   const stat = await client.statObject(bucket, key)
 
-  const chunks: Buffer[] = []
-  for await (const chunk of stream) {
-    chunks.push(chunk)
+  return {
+    stream,
+    contentType: stat.metaData['content-type'] || 'application/octet-stream'
   }
+}
 
+/**
+ * Get an image from MinIO (Buffered)
+ * @deprecated Use getImageStream for better performance
+ * @returns Buffer and content type
+ */
+export async function getImage(key: string): Promise<{ buffer: Buffer, contentType: string }> {
+  // ... existing implementation
+  const result = await getImageStream(key)
+  const chunks: Buffer[] = []
+  for await (const chunk of result.stream) {
+    chunks.push(Buffer.from(chunk))
+  }
   return {
     buffer: Buffer.concat(chunks),
-    contentType: stat.metaData['content-type'] || 'application/octet-stream'
+    contentType: result.contentType
   }
 }
 

@@ -1,11 +1,12 @@
 import { prisma } from '../utils/db'
 import { lookup } from 'node:dns'
+import { Readable } from 'node:stream'
 import net from 'node:net'
 import { promisify } from 'node:util'
 import {
   isMinioEnabled,
   parseMinioUrl,
-  getImage as getMinioImage
+  getImageStream as getMinioImageStream
 } from '../utils/minio'
 
 const dnsLookup = promisify(lookup)
@@ -60,7 +61,7 @@ async function validateExternalUrl(url: string): Promise<void> {
  * Handles MinIO (minio://), Base64 (data:), and External URLs (http/https).
  * @returns Object containing buffer and mimeType
  */
-export async function getImage(type: string, id: string): Promise<{ buffer: Buffer, mimeType: string }> {
+export async function getImageStream(type: string, id: string): Promise<{ stream: Readable, mimeType: string }> {
   let imageUrl: string | null = null
 
   // 1. Resolve URL from Database
@@ -95,9 +96,9 @@ export async function getImage(type: string, id: string): Promise<{ buffer: Buff
     if (!parsed) {
       throw new Error('Invalid MinIO URL format')
     }
-    const result = await getMinioImage(parsed.key)
+    const result = await getMinioImageStream(parsed.key)
     return {
-      buffer: result.buffer,
+      stream: result.stream as Readable,
       mimeType: result.contentType
     }
   }
@@ -108,7 +109,7 @@ export async function getImage(type: string, id: string): Promise<{ buffer: Buff
     if (matches && matches[1] && matches[2]) {
       return {
         mimeType: matches[1],
-        buffer: Buffer.from(matches[2].replace(/\s/g, ''), 'base64')
+        stream: Readable.from(Buffer.from(matches[2].replace(/\s/g, ''), 'base64'))
       }
     }
   }
@@ -123,10 +124,15 @@ export async function getImage(type: string, id: string): Promise<{ buffer: Buff
     }
 
     const mimeType = response.headers.get('content-type') || 'application/octet-stream'
-    const arrayBuffer = await response.arrayBuffer()
+    if (!response.body) throw new Error('Empty response body')
+    // Convert Web Stream to Node Stream if necessary, but Nitro sendStream usually handles both.
+    // However, to be safe with types:
+    // @ts-expect-error Readable.fromWeb is available in recent Node versions
+    const stream = Readable.fromWeb(response.body)
+
     return {
       mimeType,
-      buffer: Buffer.from(arrayBuffer)
+      stream
     }
   }
 
@@ -135,5 +141,5 @@ export async function getImage(type: string, id: string): Promise<{ buffer: Buff
 
 // Export as namespace for backward compatibility
 export const ImageService = {
-  getImage
+  getImage: getImageStream
 }

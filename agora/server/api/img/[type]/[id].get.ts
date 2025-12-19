@@ -9,7 +9,8 @@ export default defineCachedEventHandler(async (event) => {
   }
 
   try {
-    const { buffer, mimeType } = await ImageService.getImage(type, id)
+    // Note: ImageService.getImage is now aliased to getImageStream
+    const { stream, mimeType } = await ImageService.getImage(type, id)
 
     // Set Content-Type
     if (mimeType) {
@@ -21,7 +22,7 @@ export default defineCachedEventHandler(async (event) => {
     // this header handles the "Browser" cache.
     setHeader(event, 'Cache-Control', 'public, max-age=31536000, immutable')
 
-    return buffer
+    return sendStream(event, stream)
   } catch (error: unknown) {
     // Map Service Errors to HTTP Errors
     const message = error instanceof Error ? error.message : 'Unknown error'
