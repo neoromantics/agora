@@ -58,6 +58,12 @@ export const typeResolvers = {
         orderBy: { createdAt: 'desc' },
         take: limit
       })
+    },
+    commentCount: async (parent: any) => {
+      if (parent.commentCount !== undefined) return parent.commentCount
+      return prisma.comment.count({
+        where: { conversationId: parent.id }
+      })
     }
   },
 
