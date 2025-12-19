@@ -86,6 +86,7 @@ export default defineNuxtConfig({
   image: {
     provider: 'ipx',
     ipx: {
+      // @ts-expect-error IPX options including alias are passed through at runtime
       alias: {
         // Map relative paths (e.g. /agora/api/img) to localhost to bypass external loopback latency
         [`${process.env.NUXT_PUBLIC_BASE_URL || '/agora/beta'}/api/img`]: `http://localhost:3000${process.env.NUXT_PUBLIC_BASE_URL || '/agora/beta'}/api/img`

@@ -168,7 +168,6 @@ function onFork(conversation: Conversation) {
           searchable-placeholder="Search thinkers..."
           placeholder="Filter by thinker"
           class="w-full sm:w-64"
-
         />
         <UButton
           v-if="searchQuery || selectedPhilosopher"

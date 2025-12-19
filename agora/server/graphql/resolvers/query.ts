@@ -7,7 +7,7 @@ import type { Context } from '../context'
 // Format philosopher with simple relative path - IPX baseURL is correctly configured for subpath
 const defaultBaseURL = process.env.NUXT_PUBLIC_BASE_URL || '/agora/beta'
 
-const getBaseURL = (event: any) => {
+const getBaseURL = (_event: any) => {
   // Return path-absolute URL (e.g. /agora) to allow IPX to use internal localhost fetch via alias
   return defaultBaseURL
 }
