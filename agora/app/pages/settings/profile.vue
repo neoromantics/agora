@@ -91,8 +91,8 @@ async function handleFileChange(event: Event) {
   isUploading.value = true
   const file = input.files[0]
 
-  if (file && file.size > 500 * 1024) {
-    toast.add({ title: 'File too large', description: 'Please choose an image under 500KB', color: 'error' })
+  if (file && file.size > 5 * 1024 * 1024) {
+    toast.add({ title: 'File too large', description: 'Please choose an image under 5MB', color: 'error' })
     isUploading.value = false
     return
   }

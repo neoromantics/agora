@@ -159,6 +159,8 @@ async function executeDelete() {
 const isEditModalOpen = ref(false)
 const isCreating = ref(false)
 const isSavingUser = ref(false)
+const isUploading = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
 const editingUser = ref<AdminUser | null>(null)
 const userForm = reactive({
   name: '',
@@ -265,6 +267,44 @@ async function saveUser() {
   } finally {
     isSavingUser.value = false
   }
+}
+
+async function handleFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+
+  isUploading.value = true
+  const file = input.files[0]
+
+  // 5MB limit
+  if (file && file.size > 5 * 1024 * 1024) {
+    toast.add({ title: 'File too large', description: 'Please choose an image under 5MB', color: 'error' })
+    isUploading.value = false
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('file', file as Blob)
+
+  try {
+    const data = await $fetch<{ url: string }>('/api/upload', {
+      method: 'POST',
+      body: formData
+    })
+    userForm.avatar = data.url
+    toast.add({ title: 'Photo uploaded', color: 'success' })
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Upload failed'
+    toast.add({ title: 'Upload failed', description: message, color: 'error' })
+  } finally {
+    isUploading.value = false
+    // Reset input
+    input.value = ''
+  }
+}
+
+function triggerFileInput() {
+  fileInput.value?.click()
 }
 </script>
 
@@ -524,20 +564,51 @@ async function saveUser() {
             <div class="p-4 space-y-4">
               <!-- Avatar Preview -->
               <div class="flex items-center gap-4 pb-4 border-b border-stone-200 dark:border-stone-700">
-                <UAvatar
-                  :src="userForm.avatar || undefined"
-                  :alt="userForm.name"
-                  size="xl"
-                />
+                <div class="relative">
+                  <UAvatar
+                    :src="userForm.avatar || undefined"
+                    :alt="userForm.name"
+                    size="xl"
+                  />
+                  <div
+                    v-if="isUploading"
+                    class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full"
+                  >
+                    <UIcon
+                      name="i-lucide-loader-2"
+                      class="w-6 h-6 text-white animate-spin"
+                    />
+                  </div>
+                </div>
                 <div class="flex-1">
                   <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
-                    Avatar URL
+                    Avatar
                   </label>
-                  <UInput
-                    v-model="userForm.avatar"
-                    placeholder="https://..."
-                    size="sm"
-                  />
+                  <div class="flex gap-2">
+                    <UInput
+                      v-model="userForm.avatar"
+                      placeholder="https://..."
+                      size="sm"
+                      class="flex-1"
+                    />
+                    <input
+                      ref="fileInput"
+                      type="file"
+                      accept="image/*"
+                      class="hidden"
+                      @change="handleFileChange"
+                    >
+                    <UTooltip text="Upload photo (max 5MB)">
+                      <UButton
+                        color="neutral"
+                        variant="soft"
+                        icon="i-lucide-camera"
+                        size="sm"
+                        :loading="isUploading"
+                        @click="triggerFileInput"
+                      />
+                    </UTooltip>
+                  </div>
                 </div>
               </div>
 

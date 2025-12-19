@@ -28,12 +28,12 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Limit file size to 500KB for avatars
-  const maxSize = 500 * 1024 // 500KB
+  // Limit file size to 5MB for avatars
+  const maxSize = 5 * 1024 * 1024 // 5MB
   if (file.data.length > maxSize) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Image too large. Maximum size is 500KB.'
+      statusMessage: 'Image too large. Maximum size is 5MB.'
     })
   }
 
