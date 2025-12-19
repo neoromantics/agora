@@ -444,6 +444,35 @@ async function togglePublic() {
 const formatTime = formatTimeUtil
 
 onUnmounted(() => socket.value?.disconnect())
+
+// Delete Conversation
+const showDeleteConfirm = ref(false)
+const isDeleting = ref(false)
+
+async function deleteConversation() {
+  if (!conversation.value.id || isDeleting.value) return
+  isDeleting.value = true
+  try {
+    const { errors } = await $fetch<{ errors?: { message: string }[] }>('/api/graphql', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: {
+        query: `mutation DeleteConversation($conversationId: ID!) {
+          deleteConversation(conversationId: $conversationId)
+        }`,
+        variables: { conversationId: conversation.value.id }
+      }
+    })
+    if (errors?.length) throw new Error(errors[0]?.message)
+    toast.add({ title: 'Conversation deleted', color: 'success' })
+    navigateTo('/conversations')
+  } catch (e) {
+    toast.add({ title: 'Error', description: e instanceof Error ? e.message : 'Failed to delete', color: 'error' })
+  } finally {
+    isDeleting.value = false
+    showDeleteConfirm.value = false
+  }
+}
 </script>
 
 <template>
@@ -559,6 +588,15 @@ onUnmounted(() => socket.value?.disconnect())
             >
               <span v-if="(conversation.commentCount || 0) > 0">{{ conversation.commentCount }}</span>
             </UButton>
+
+            <UButton
+              v-if="isOwner && !isNewConversation"
+              variant="ghost"
+              color="error"
+              icon="i-lucide-trash-2"
+              size="xs"
+              @click="showDeleteConfirm = true"
+            />
           </div>
         </div>
       </header>
@@ -881,5 +919,39 @@ onUnmounted(() => socket.value?.disconnect())
       v-model="showForkModal"
       :conversation="conversation"
     />
+
+    <!-- Delete Confirmation Modal -->
+    <UModal v-model:open="showDeleteConfirm">
+      <template #content>
+        <UCard>
+          <div class="text-center p-4">
+            <UIcon
+              name="i-lucide-trash-2"
+              class="w-12 h-12 mx-auto mb-4 text-red-500"
+            />
+            <h3 class="text-lg font-bold text-stone-900 dark:text-stone-100 mb-2">
+              Delete Conversation?
+            </h3>
+            <p class="text-stone-600 dark:text-stone-400 mb-6">
+              This will permanently delete this conversation and all its messages.
+            </p>
+            <div class="flex justify-center gap-3">
+              <UButton
+                label="Cancel"
+                color="neutral"
+                variant="ghost"
+                @click="showDeleteConfirm = false"
+              />
+              <UButton
+                label="Delete"
+                color="error"
+                :loading="isDeleting"
+                @click="deleteConversation"
+              />
+            </div>
+          </div>
+        </UCard>
+      </template>
+    </UModal>
   </div>
 </template>
