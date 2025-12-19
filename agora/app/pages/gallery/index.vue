@@ -164,7 +164,7 @@ definePageMeta({
                 width="80"
                 height="80"
                 fit="cover"
-                loading="lazy"
+                loading="eager"
               />
             </div>
 
