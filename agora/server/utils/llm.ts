@@ -3,7 +3,7 @@ import { CircuitBreaker } from '../services/circuitBreaker'
 import { RateLimiter } from '../services/rateLimiter'
 import { PromptBuilder } from '../services/promptBuilder'
 import { FallbackService } from '../services/fallbacks'
-import { GeminiProvider } from '../providers/gemini'
+import { getLLMProvider } from '../providers'
 
 // Configuration
 const CONFIG = {
@@ -54,7 +54,7 @@ export async function generatePhilosopherResponse(
   try {
     console.log(`[LLM] Generating response for ${philosopher.name}, history: ${limitedHistory.length} messages`)
 
-    const text = await GeminiProvider.generate(fullPrompt, CONFIG.REQUEST_TIMEOUT)
+    const text = await getLLMProvider().generate(fullPrompt, CONFIG.REQUEST_TIMEOUT)
 
     if (!text || text.trim().length === 0) {
       console.warn('[LLM] Empty response received')
@@ -104,7 +104,7 @@ export async function generateConversationSummary(
 
     const prompt = `Summarize this philosophical conversation between a user and ${philosopherName} in 2-3 sentences. Focus on the main topics discussed and any insights shared:\n\n${conversationText}`
 
-    return await GeminiProvider.generate(prompt, CONFIG.REQUEST_TIMEOUT)
+    return await getLLMProvider().generate(prompt, CONFIG.REQUEST_TIMEOUT)
   } catch (error) {
     console.error('[LLM] Failed to generate summary:', error)
     return ''

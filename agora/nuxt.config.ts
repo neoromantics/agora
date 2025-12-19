@@ -41,6 +41,9 @@ export default defineNuxtConfig({
     redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
     logLevel: process.env.LOG_LEVEL || 'INFO',
     disableLlm: process.env.DISABLE_LLM === 'true',
+    // LLM Provider Configuration
+    llmProvider: process.env.LLM_PROVIDER || 'gemini',
+    llmModel: process.env.LLM_MODEL || 'gemma-3-27b-it',
     // Public (exposed to client)
     public: {
       baseUrl: process.env.NUXT_PUBLIC_BASE_URL || '/agora'
