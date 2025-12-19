@@ -48,19 +48,23 @@ secrets:
 # Environment variables
 env:
   NODE_ENV: production
-  NODE_OPTIONS: "--max-old-space-size=512"
+  NODE_OPTIONS: "--max-old-space-size=1024"
   NUXT_PUBLIC_BASE_URL: /agora
 
 # Liveness and readiness probes
 probes:
   liveness:
     path: /api/health
-    initialDelaySeconds: 10
-    periodSeconds: 10
+    initialDelaySeconds: 60
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 5
   readiness:
     path: /api/health
-    initialDelaySeconds: 5
-    periodSeconds: 5
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
 
 # Pod annotations
 podAnnotations: {}
