@@ -86,7 +86,10 @@ export default defineNuxtConfig({
   image: {
     provider: 'ipx',
     ipx: {
-      // access: { ... } (defaults)
+      alias: {
+        // Map relative paths (e.g. /agora/api/img) to localhost to bypass external loopback latency
+        [`${process.env.NUXT_PUBLIC_BASE_URL || '/agora/beta'}/api/img`]: `http://localhost:3000${process.env.NUXT_PUBLIC_BASE_URL || '/agora/beta'}/api/img`
+      }
     },
     // Configure domains for IPX
     domains: [

@@ -8,10 +8,8 @@ import type { Context } from '../context'
 const defaultBaseURL = process.env.NUXT_PUBLIC_BASE_URL || '/agora/beta'
 
 const getBaseURL = (event: any) => {
-  if (!event) return defaultBaseURL
-  const protocol = event.node.req.headers['x-forwarded-proto'] || 'http'
-  const host = event.node.req.headers['host']
-  return `${protocol}://${host}${defaultBaseURL}`
+  // Return path-absolute URL (e.g. /agora) to allow IPX to use internal localhost fetch via alias
+  return defaultBaseURL
 }
 
 const formatPhilosopher = (p: any, baseURL: string) => {
