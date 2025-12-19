@@ -110,3 +110,34 @@ export async function generateConversationSummary(
     return ''
   }
 }
+
+/**
+ * Generate a creative title for a conversation
+ */
+export async function generateConversationTitle(
+  philosopherName: string,
+  messages: { role: string, content: string }[]
+): Promise<string> {
+  if (CircuitBreaker.isOpen()) {
+    return ''
+  }
+
+  try {
+    const conversationText = messages
+      .slice(-4) // Last few messages are enough for a title context if starting, or early messages
+      .map(m => `${m.role === 'user' ? 'User' : philosopherName}: ${m.content}`)
+      .join('\n\n')
+
+    const prompt = `Create a short, intriguing, philosophical title (max 6 words) for this conversation between a user and ${philosopherName}. Do not use quotes. Do not use "Conversation with".
+    
+${conversationText}
+
+Title:`
+
+    const title = await getLLMProvider().generate(prompt, CONFIG.REQUEST_TIMEOUT)
+    return title.replace(/^["']|["']$/g, '').trim() // Remove quotes if any
+  } catch (error) {
+    console.error('[LLM] Failed to generate title:', error)
+    return ''
+  }
+}

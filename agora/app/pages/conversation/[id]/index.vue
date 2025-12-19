@@ -296,6 +296,9 @@ function connectSocket() {
     )
     if (!isDuplicate) conversation.value.messages.push(message)
   })
+  socket.value.on('conversation:updated', (data: { title: string }) => {
+    if (data.title) conversation.value.title = data.title
+  })
 }
 
 watch(() => conversation.value.messages.length, (newLen: number, oldLen: number) => {

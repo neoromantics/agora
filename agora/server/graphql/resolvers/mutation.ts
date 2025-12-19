@@ -4,7 +4,7 @@ import { GraphQLError } from 'graphql'
 import { prisma } from '../../utils/db'
 
 import { requireAuth, hashPassword, verifyPassword, generateToken } from '../../utils/auth'
-import { generatePhilosopherResponse, generateConversationSummary } from '../../utils/llm'
+import { generatePhilosopherResponse, generateConversationSummary, generateConversationTitle } from '../../utils/llm'
 import { applyRateLimit, RATE_LIMITS } from '../../utils/rateLimit'
 import { requireAdmin, Role } from '../../utils/rbac'
 import type { Context } from '../context'
@@ -240,6 +240,25 @@ export const mutationResolvers = {
         where: { id: conversationId },
         data: { updatedAt: new Date() }
       })
+
+      // Background: Check if we should update the title
+      if (conversation.title.startsWith('Conversation with') && conversation.messages.length < 2) {
+        generateConversationTitle(conversation.philosopher.name, [
+          ...conversation.messages.map(m => ({ role: m.role, content: m.content })),
+          { role: 'user', content },
+          { role: 'philosopher', content: philosopherResponse }
+        ]).then(async (newTitle) => {
+          if (newTitle) {
+            await prisma.conversation.update({
+              where: { id: conversationId },
+              data: { title: newTitle }
+            })
+            if (io) {
+              io.to(`conversation:${conversationId}`).emit('conversation:updated', { title: newTitle })
+            }
+          }
+        }).catch(err => console.error('[Conversation] Failed to auto-title:', err))
+      }
 
       return { userMessage, philosopherMessage: botMessage }
     },
