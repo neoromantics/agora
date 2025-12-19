@@ -792,6 +792,17 @@ onUnmounted(() => socket.value?.disconnect())
         </div>
       </div>
 
+      <!-- Comment Section (for public conversations only) -->
+      <div
+        v-if="!isNewConversation && conversation.isPublic"
+        class="max-w-3xl mx-auto px-4 py-6"
+      >
+        <CommentSection
+          :conversation-id="conversation.id"
+          :is-public="conversation.isPublic"
+        />
+      </div>
+
       <!-- Input or Fork CTA -->
       <div class="sticky bottom-0 bg-cream dark:bg-stone-950 border-t border-stone-200 dark:border-stone-800 px-4 py-4">
         <form
