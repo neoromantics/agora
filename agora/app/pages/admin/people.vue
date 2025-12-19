@@ -51,8 +51,6 @@ const { data: philosophers, refresh, status, error } = await useAsyncData('admin
   })
 
   return data?.philosophers || []
-}, {
-  server: false
 })
 
 // --- Search & Filtering ---
@@ -262,49 +260,50 @@ async function executeDelete() {
     </div>
 
     <!-- Grid -->
-    <ClientOnly>
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
-        <div
-          v-for="phil in filteredPhilosophers"
-          :key="phil.id"
-          class="group relative bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden hover:shadow-lg hover:border-stone-300 dark:hover:border-stone-700 transition-all duration-300 cursor-pointer"
-          @click="openEdit(phil)"
-        >
-          <!-- Image & Actions -->
-          <div class="aspect-[4/5] relative overflow-hidden bg-stone-100 dark:bg-stone-800">
-            <img
-              :src="phil.portrait"
-              :alt="phil.name"
-              class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-            >
-            <!-- Delete Action (Overlay) -->
-            <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <UButton
-                icon="i-lucide-trash"
-                color="error"
-                variant="solid"
-                size="xs"
-                @click.stop="confirmDelete(phil.id)"
-              />
-            </div>
-            <!-- Gradient Overlay for aesthetics -->
-            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 pointer-events-none">
-              <!-- Content removed, just gradient now -->
-            </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
+      <div
+        v-for="phil in filteredPhilosophers"
+        :key="phil.id"
+        class="group relative bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden hover:shadow-lg hover:border-stone-300 dark:hover:border-stone-700 transition-all duration-300 cursor-pointer"
+        @click="openEdit(phil)"
+      >
+        <!-- Image & Actions -->
+        <div class="aspect-[4/5] relative overflow-hidden bg-stone-100 dark:bg-stone-800">
+          <NuxtImg
+            :src="phil.portrait"
+            :alt="phil.name"
+            width="300"
+            height="375"
+            fit="cover"
+            class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+          />
+          <!-- Delete Action (Overlay) -->
+          <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <UButton
+              icon="i-lucide-trash"
+              color="error"
+              variant="solid"
+              size="xs"
+              @click.stop="confirmDelete(phil.id)"
+            />
           </div>
-
-          <!-- Info -->
-          <div class="p-4">
-            <h3 class="font-serif font-bold text-lg text-stone-900 dark:text-stone-100 truncate">
-              {{ phil.name }}
-            </h3>
-            <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide mt-1">
-              {{ phil.era }}
-            </p>
+          <!-- Gradient Overlay for aesthetics -->
+          <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 pointer-events-none">
+            <!-- Content removed, just gradient now -->
           </div>
         </div>
+
+        <!-- Info -->
+        <div class="p-4">
+          <h3 class="font-serif font-bold text-lg text-stone-900 dark:text-stone-100 truncate">
+            {{ phil.name }}
+          </h3>
+          <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide mt-1">
+            {{ phil.era }}
+          </p>
+        </div>
       </div>
-    </ClientOnly>
+    </div>
 
     <!-- Empty State -->
     <div
@@ -323,221 +322,219 @@ async function executeDelete() {
     </div>
 
     <!-- Create/Edit Modal -->
-    <ClientOnly>
-      <UModal
-        v-model:open="isModalOpen"
-        :ui="{ width: 'sm:max-w-4xl' } as any"
-      >
-        <template #content>
-          <UCard
-            class="ring-1 ring-stone-200/50 dark:ring-stone-700/50 divide-y divide-stone-100 dark:divide-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl shadow-2xl rounded-2xl"
-            :ui="{ body: 'p-0 sm:p-0', header: 'px-6 py-4 sm:px-6', footer: 'px-6 py-4 sm:px-6' }"
+    <UModal
+      v-model:open="isModalOpen"
+      :ui="{ width: 'sm:max-w-4xl' } as any"
+    >
+      <template #content>
+        <UCard
+          class="ring-1 ring-stone-200/50 dark:ring-stone-700/50 divide-y divide-stone-100 dark:divide-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl shadow-2xl rounded-2xl"
+          :ui="{ body: 'p-0 sm:p-0', header: 'px-6 py-4 sm:px-6', footer: 'px-6 py-4 sm:px-6' }"
+        >
+          <template #header>
+            <div class="flex items-center justify-between">
+              <h3 class="text-xl font-serif font-bold text-stone-900 dark:text-stone-100">
+                {{ editingId ? 'Edit Thinker' : 'New Thinker' }}
+              </h3>
+              <UButton
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-x"
+                class="-my-1"
+                @click="isModalOpen = false"
+              />
+            </div>
+          </template>
+
+          <UForm
+            :schema="schema"
+            :state="formState"
+            class="space-y-6 p-6 max-h-[70vh] overflow-y-auto"
+            @submit="onSubmit"
           >
-            <template #header>
-              <div class="flex items-center justify-between">
-                <h3 class="text-xl font-serif font-bold text-stone-900 dark:text-stone-100">
-                  {{ editingId ? 'Edit Thinker' : 'New Thinker' }}
-                </h3>
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  icon="i-lucide-x"
-                  class="-my-1"
-                  @click="isModalOpen = false"
+            <!-- Identity -->
+            <div class="space-y-4">
+              <h4 class="text-sm font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <UIcon
+                  name="i-lucide-user"
+                  class="w-4 h-4"
                 />
-              </div>
-            </template>
-
-            <UForm
-              :schema="schema"
-              :state="formState"
-              class="space-y-6 p-6 max-h-[70vh] overflow-y-auto"
-              @submit="onSubmit"
-            >
-              <!-- Identity -->
-              <div class="space-y-4">
-                <h4 class="text-sm font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
-                  <UIcon
-                    name="i-lucide-user"
-                    class="w-4 h-4"
-                  />
-                  Identity
-                </h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <UFormField
-                    label="Name"
-                    name="name"
-                    required
-                  >
-                    <UInput
-                      v-model="formState.name"
-                      placeholder="e.g. Socrates"
-                      icon="i-lucide-user"
-                    />
-                  </UFormField>
-                  <UFormField
-                    label="Slug"
-                    name="slug"
-                    required
-                  >
-                    <UInput
-                      v-model="formState.slug"
-                      placeholder="e.g. socrates"
-                      icon="i-lucide-link"
-                    >
-                      <template #leading>
-                        <span class="text-stone-400">/</span>
-                      </template>
-                    </UInput>
-                  </UFormField>
-                  <UFormField
-                    label="Portrait URL"
-                    name="portrait"
-                    class="md:col-span-2"
-                  >
-                    <div class="flex gap-4 items-start">
-                      <UAvatar
-                        :src="formState.portrait"
-                        :alt="formState.name"
-                        size="xl"
-                        class="ring-1 ring-stone-200 dark:ring-stone-800"
-                      />
-                      <UInput
-                        v-model="formState.portrait"
-                        placeholder="https://..."
-                        icon="i-lucide-image"
-                        class="flex-1"
-                      />
-                    </div>
-                  </UFormField>
-                </div>
-              </div>
-
-              <UDivider />
-
-              <!-- Context -->
-              <div class="space-y-4">
-                <h4 class="text-sm font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
-                  <UIcon
-                    name="i-lucide-hourglass"
-                    class="w-4 h-4"
-                  />
-                  Context
-                </h4>
-                <div class="grid grid-cols-3 gap-4">
-                  <UFormField
-                    label="Era"
-                    name="era"
-                  >
-                    <UInput
-                      v-model="formState.era"
-                      placeholder="e.g. Ancient"
-                    />
-                  </UFormField>
-                  <UFormField
-                    label="Years"
-                    name="years"
-                  >
-                    <UInput
-                      v-model="formState.years"
-                      placeholder="e.g. 500 BC"
-                    />
-                  </UFormField>
-                  <UFormField
-                    label="Nationality"
-                    name="nationality"
-                  >
-                    <UInput
-                      v-model="formState.nationality"
-                      placeholder="e.g. Greek"
-                    />
-                  </UFormField>
-                </div>
-              </div>
-
-              <UDivider />
-
-              <!-- Content -->
-              <div class="space-y-4">
-                <h4 class="text-sm font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
-                  <UIcon
-                    name="i-lucide-book-open"
-                    class="w-4 h-4"
-                  />
-                  Content
-                </h4>
+                Identity
+              </h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <UFormField
-                  label="Biography"
-                  name="biography"
-                >
-                  <UTextarea
-                    v-model="formState.biography"
-                    :rows="3"
-                  />
-                </UFormField>
-                <UFormField
-                  label="Topics (comma separated)"
-                  name="topics"
+                  label="Name"
+                  name="name"
+                  required
                 >
                   <UInput
-                    v-model="formState.topics"
-                    placeholder="Logic, Ethics..."
+                    v-model="formState.name"
+                    placeholder="e.g. Socrates"
+                    icon="i-lucide-user"
                   />
                 </UFormField>
                 <UFormField
-                  label="Quotes (one per line)"
-                  name="quotes"
+                  label="Slug"
+                  name="slug"
+                  required
                 >
-                  <UTextarea
-                    v-model="formState.quotes"
-                    :rows="4"
-                  />
+                  <UInput
+                    v-model="formState.slug"
+                    placeholder="e.g. socrates"
+                    icon="i-lucide-link"
+                  >
+                    <template #leading>
+                      <span class="text-stone-400">/</span>
+                    </template>
+                  </UInput>
                 </UFormField>
-              </div>
-
-              <UDivider />
-
-              <!-- AI Config -->
-              <div class="space-y-4">
-                <h4 class="text-sm font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
-                  <UIcon
-                    name="i-lucide-cpu"
-                    class="w-4 h-4"
-                  />
-                  AI Configuration
-                </h4>
                 <UFormField
-                  label="System Prompt"
-                  description="The core personality instructions"
-                  name="systemPrompt"
+                  label="Portrait URL"
+                  name="portrait"
+                  class="md:col-span-2"
                 >
-                  <UTextarea
-                    v-model="formState.systemPrompt"
-                    :rows="8"
-                    class="font-mono text-xs"
+                  <div class="flex gap-4 items-start">
+                    <UAvatar
+                      :src="formState.portrait"
+                      :alt="formState.name"
+                      size="xl"
+                      class="ring-1 ring-stone-200 dark:ring-stone-800"
+                    />
+                    <UInput
+                      v-model="formState.portrait"
+                      placeholder="https://..."
+                      icon="i-lucide-image"
+                      class="flex-1"
+                    />
+                  </div>
+                </UFormField>
+              </div>
+            </div>
+
+            <UDivider />
+
+            <!-- Context -->
+            <div class="space-y-4">
+              <h4 class="text-sm font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <UIcon
+                  name="i-lucide-hourglass"
+                  class="w-4 h-4"
+                />
+                Context
+              </h4>
+              <div class="grid grid-cols-3 gap-4">
+                <UFormField
+                  label="Era"
+                  name="era"
+                >
+                  <UInput
+                    v-model="formState.era"
+                    placeholder="e.g. Ancient"
+                  />
+                </UFormField>
+                <UFormField
+                  label="Years"
+                  name="years"
+                >
+                  <UInput
+                    v-model="formState.years"
+                    placeholder="e.g. 500 BC"
+                  />
+                </UFormField>
+                <UFormField
+                  label="Nationality"
+                  name="nationality"
+                >
+                  <UInput
+                    v-model="formState.nationality"
+                    placeholder="e.g. Greek"
                   />
                 </UFormField>
               </div>
+            </div>
 
-              <div class="flex justify-end gap-3 border-t border-stone-100 dark:border-stone-800 pt-6">
-                <UButton
-                  label="Cancel"
-                  color="neutral"
-                  variant="ghost"
-                  @click="isModalOpen = false"
+            <UDivider />
+
+            <!-- Content -->
+            <div class="space-y-4">
+              <h4 class="text-sm font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <UIcon
+                  name="i-lucide-book-open"
+                  class="w-4 h-4"
                 />
-                <UButton
-                  type="submit"
-                  label="Save Thinker"
-                  color="primary"
-                  :loading="loading"
+                Content
+              </h4>
+              <UFormField
+                label="Biography"
+                name="biography"
+              >
+                <UTextarea
+                  v-model="formState.biography"
+                  :rows="3"
                 />
-              </div>
-            </UForm>
-          </UCard>
-        </template>
-      </UModal>
-    </ClientOnly>
+              </UFormField>
+              <UFormField
+                label="Topics (comma separated)"
+                name="topics"
+              >
+                <UInput
+                  v-model="formState.topics"
+                  placeholder="Logic, Ethics..."
+                />
+              </UFormField>
+              <UFormField
+                label="Quotes (one per line)"
+                name="quotes"
+              >
+                <UTextarea
+                  v-model="formState.quotes"
+                  :rows="4"
+                />
+              </UFormField>
+            </div>
+
+            <UDivider />
+
+            <!-- AI Config -->
+            <div class="space-y-4">
+              <h4 class="text-sm font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <UIcon
+                  name="i-lucide-cpu"
+                  class="w-4 h-4"
+                />
+                AI Configuration
+              </h4>
+              <UFormField
+                label="System Prompt"
+                description="The core personality instructions"
+                name="systemPrompt"
+              >
+                <UTextarea
+                  v-model="formState.systemPrompt"
+                  :rows="8"
+                  class="font-mono text-xs"
+                />
+              </UFormField>
+            </div>
+
+            <div class="flex justify-end gap-3 border-t border-stone-100 dark:border-stone-800 pt-6">
+              <UButton
+                label="Cancel"
+                color="neutral"
+                variant="ghost"
+                @click="isModalOpen = false"
+              />
+              <UButton
+                type="submit"
+                label="Save Thinker"
+                color="primary"
+                :loading="loading"
+              />
+            </div>
+          </UForm>
+        </UCard>
+      </template>
+    </UModal>
 
     <DeleteConfirmationModal
       v-if="showDeleteModal"

@@ -3,6 +3,7 @@ import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
 import fs from 'fs'
 import path from 'path'
+import { Client } from 'minio'
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/agora?schema=public'
 
@@ -250,20 +251,56 @@ async function main() {
     zizek: 'zizek.jpg'
   }
 
+  // Check for MinIO configuration
+  let minioClient: Client | null = null
+  const endpoint = process.env.NUXT_MINIO_ENDPOINT
+  const bucketName = process.env.NUXT_MINIO_BUCKET || 'agora'
+
+  if (endpoint) {
+    const [endPoint, portStr] = endpoint.split(':')
+    const port = portStr ? parseInt(portStr, 10) : 9000
+    minioClient = new Client({
+      endPoint,
+      port,
+      useSSL: process.env.NUXT_MINIO_USE_SSL === 'true',
+      accessKey: process.env.NUXT_MINIO_ACCESS_KEY || '',
+      secretKey: process.env.NUXT_MINIO_SECRET_KEY || ''
+    })
+
+    // Ensure bucket exists
+    try {
+      const exists = await minioClient.bucketExists(bucketName)
+      if (!exists) {
+        await minioClient.makeBucket(bucketName, '')
+      }
+    } catch (err) {
+      console.warn('Failed to check/create MinIO bucket, skipping local image uploads:', err)
+      minioClient = null
+    }
+  }
+
   for (const philosopher of philosophers) {
     let portrait = philosopher.portrait
 
-    if (localImages[philosopher.slug]) {
+    // Use local image if MinIO is available
+    if (localImages[philosopher.slug] && minioClient) {
       const imagePath = path.join('/home/tl370/agora', localImages[philosopher.slug])
       if (fs.existsSync(imagePath)) {
         try {
           const buffer = fs.readFileSync(imagePath)
           const ext = path.extname(imagePath).toLowerCase()
           const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg'
-          portrait = `data:${mimeType};base64,${buffer.toString('base64')}`
-          console.log(`Using local image for ${philosopher.name}`)
+
+          const objectKey = `philosophers/${philosopher.slug}-${Date.now()}${ext}`
+
+          await minioClient.putObject(bucketName, objectKey, buffer, buffer.length, {
+            'Content-Type': mimeType
+          })
+
+          portrait = `minio://${bucketName}/${objectKey}`
+          console.log(`Uploaded local image for ${philosopher.name} to MinIO`)
         } catch (error) {
-          console.error(`Failed to read local image for ${philosopher.name}:`, error)
+          console.error(`Failed to upload local image for ${philosopher.name}:`, error)
         }
       } else {
         console.warn(`Local image file found in map but not on disk: ${imagePath}`)

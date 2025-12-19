@@ -1,28 +1,26 @@
 // Rate limiting utility using sliding window algorithm
-// Uses in-memory store for simplicity (Redis adapter can be added for distributed)
+// Uses Redis if available, otherwise falls back to in-memory store
 import { type H3Event, getHeader, setHeader, createError } from 'h3'
+import { getRedisClient } from './redis'
 
 interface RateLimitEntry {
   count: number
   windowStart: number
 }
 
-// In-memory store for rate limiting
+// In-memory store for fallback
 const rateLimitStore = new Map<string, RateLimitEntry>()
-const MAX_RATE_LIMIT_KEYS = 50000 // Cap to prevent memory exhaustion DoS
+const MAX_RATE_LIMIT_KEYS = 50000 // Cap to prevent memory exhaustion
 
-// Clean up old entries periodically
+// Clean up old in-memory entries periodically
 setInterval(() => {
   const now = Date.now()
   for (const [key, entry] of rateLimitStore.entries()) {
-    if (now - entry.windowStart > 60000) { // 1 minute window
+    if (now - entry.windowStart > 60000) {
       rateLimitStore.delete(key)
     }
   }
-
-  // Emergency cleanup if still too big
   if (rateLimitStore.size > MAX_RATE_LIMIT_KEYS) {
-    // Naively delete the first 10% of keys (oldest due to insertion order)
     let toDelete = Math.floor(MAX_RATE_LIMIT_KEYS * 0.1)
     for (const key of rateLimitStore.keys()) {
       if (toDelete <= 0) break
@@ -30,71 +28,82 @@ setInterval(() => {
       toDelete--
     }
   }
-}, 30000) // Clean up every 30 seconds
+}, 30000)
 
 export interface RateLimitConfig {
-  windowMs: number // Time window in milliseconds
-  maxRequests: number // Max requests per window
-  keyGenerator?: (event: H3Event) => string // Custom key generator
+  windowMs: number
+  maxRequests: number
+  keyGenerator?: (event: H3Event) => string
 }
 
-// Default configs for different operations
 export const RATE_LIMITS = {
-  // General API requests per IP
   default: { windowMs: 60000, maxRequests: 100 },
-
-  // More restrictive for auth operations (prevent brute force)
   auth: { windowMs: 60000, maxRequests: 10 },
-
-  // Password reset (prevent enumeration)
-  passwordReset: { windowMs: 3600000, maxRequests: 5 }, // 5 per hour
-
-  // LLM operations (expensive)
+  passwordReset: { windowMs: 3600000, maxRequests: 5 },
   llm: { windowMs: 60000, maxRequests: 20 },
-
-  // Comment/like operations
-  // Comment/like operations
   interaction: { windowMs: 60000, maxRequests: 30 },
-
-  // Admin operations (high privilege, low frequency)
-  admin: { windowMs: 60000, maxRequests: 30 } // Enough for bulk ops but prevents runaways
-
+  admin: { windowMs: 60000, maxRequests: 30 }
 }
 
-/**
- * Get client IP from event
- */
 function getClientIP(event: H3Event): string {
-  // Check standard headers for proxied requests
   const forwarded = getHeader(event, 'x-forwarded-for')
-  if (forwarded) {
-    return forwarded.split(',')[0]?.trim() || 'unknown'
-  }
-
+  if (forwarded) return forwarded.split(',')[0]?.trim() || 'unknown'
   const realIP = getHeader(event, 'x-real-ip')
-  if (realIP) {
-    return realIP
-  }
-
-  // Fallback to socket address
+  if (realIP) return realIP
   return event.node.req.socket?.remoteAddress || 'unknown'
 }
 
 /**
- * Check if request should be rate limited
- * Returns remaining requests and reset time
+ * Check limits for a specific key (Async)
  */
-export function checkRateLimit(
-  event: H3Event,
-  config: RateLimitConfig = RATE_LIMITS.default
-): { allowed: boolean, remaining: number, resetAt: number } {
-  const key = config.keyGenerator?.(event) || `ip:${getClientIP(event)}`
+export async function checkLimitByKey(
+  keyIdentifier: string,
+  config: RateLimitConfig
+): Promise<{ allowed: boolean, remaining: number, resetAt: number }> {
+  const redis = getRedisClient()
   const now = Date.now()
 
+  // --- Redis Implementation ---
+  if (redis) {
+    const redisKey = `ratelimit:${keyIdentifier}`
+    const windowSeconds = Math.ceil(config.windowMs / 1000)
+
+    try {
+      const multi = redis.multi()
+      multi.incr(redisKey)
+      multi.ttl(redisKey)
+      const results = await multi.exec()
+
+      if (!results) throw new Error('Redis transaction failed')
+
+      const [incrErr, count] = results[0] as [Error | null, number]
+      const [, ttl] = results[1] as [Error | null, number]
+
+      if (incrErr) throw incrErr
+
+      if (ttl === -1) {
+        await redis.expire(redisKey, windowSeconds)
+      }
+
+      const currentCount = count
+      const remaining = Math.max(0, config.maxRequests - currentCount)
+      const resetAt = now + (ttl === -1 ? windowSeconds : ttl) * 1000
+
+      if (currentCount > config.maxRequests) {
+        return { allowed: false, remaining: 0, resetAt }
+      }
+
+      return { allowed: true, remaining, resetAt }
+    } catch (err) {
+      console.error('[RateLimit] Redis error, falling back to memory:', err)
+    }
+  }
+
+  // --- In-Memory Fallback ---
+  const key = keyIdentifier
   const entry = rateLimitStore.get(key)
 
   if (!entry || now - entry.windowStart >= config.windowMs) {
-    // New window
     rateLimitStore.set(key, { count: 1, windowStart: now })
     return {
       allowed: true,
@@ -103,7 +112,6 @@ export function checkRateLimit(
     }
   }
 
-  // Within existing window
   if (entry.count >= config.maxRequests) {
     return {
       allowed: false,
@@ -112,7 +120,6 @@ export function checkRateLimit(
     }
   }
 
-  // Increment counter
   entry.count++
   return {
     allowed: true,
@@ -122,16 +129,26 @@ export function checkRateLimit(
 }
 
 /**
- * Apply rate limiting - throws error if limit exceeded
+ * Check if request should be rate limited (Async)
  */
-export function applyRateLimit(
+export async function checkRateLimit(
+  event: H3Event,
+  config: RateLimitConfig = RATE_LIMITS.default
+): Promise<{ allowed: boolean, remaining: number, resetAt: number }> {
+  const keyIdentifier = config.keyGenerator?.(event) || `ip:${getClientIP(event)}`
+  return checkLimitByKey(keyIdentifier, config)
+}
+
+/**
+ * Apply rate limiting - throws error if limit exceeded (Async)
+ */
+export async function applyRateLimit(
   event: H3Event,
   config: RateLimitConfig = RATE_LIMITS.default,
   operation?: string
-): void {
-  const result = checkRateLimit(event, config)
+): Promise<void> {
+  const result = await checkRateLimit(event, config)
 
-  // Set rate limit headers
   setHeader(event, 'X-RateLimit-Limit', config.maxRequests.toString())
   setHeader(event, 'X-RateLimit-Remaining', result.remaining.toString())
   setHeader(event, 'X-RateLimit-Reset', Math.ceil(result.resetAt / 1000).toString())
@@ -150,16 +167,12 @@ export function applyRateLimit(
   }
 }
 
-/**
- * Create a rate limit key that includes user ID for authenticated requests
- */
 export function createUserAwareKey(event: H3Event, operation: string): string {
   const authHeader = getHeader(event, 'authorization')
   const ip = getClientIP(event)
 
   if (authHeader?.startsWith('Bearer ')) {
-    // Use a hash of the token for authenticated users
-    const token = authHeader.slice(7, 20) // First ~13 chars of token as identifier
+    const token = authHeader.slice(7, 20)
     return `user:${token}:${operation}`
   }
 

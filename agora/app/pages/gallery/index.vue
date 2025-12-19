@@ -155,12 +155,18 @@ definePageMeta({
               body: 'flex flex-col items-center text-center gap-4 p-6'
             }"
           >
-            <UAvatar
-              :src="philosopher.portrait"
-              :alt="philosopher.name"
-              size="3xl"
-              img-class="object-cover sepia-[0.15]"
-            />
+            <!-- Optimized Image with Eager Loading for LCP -->
+            <div class="relative w-20 h-20 rounded-full overflow-hidden bg-stone-100 dark:bg-stone-800 ring-1 ring-stone-200 dark:ring-stone-700 shadow-sm">
+              <NuxtImg
+                :src="philosopher.portrait"
+                :alt="philosopher.name"
+                class="w-full h-full object-cover sepia-[0.15]"
+                width="80"
+                height="80"
+                fit="cover"
+                loading="lazy"
+              />
+            </div>
 
             <div class="space-y-3">
               <h3 class="text-xl font-serif font-semibold text-stone-900 dark:text-stone-100">

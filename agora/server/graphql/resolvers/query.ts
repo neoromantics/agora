@@ -4,14 +4,32 @@ import { getCurrentUser, requireAuth } from '../../utils/auth'
 import { applyRateLimit, RATE_LIMITS } from '../../utils/rateLimit'
 import type { Context } from '../context'
 
-const formatPhilosopher = (p: any) => {
+// Format philosopher with simple relative path - IPX baseURL is correctly configured for subpath
+const defaultBaseURL = process.env.NUXT_PUBLIC_BASE_URL || '/agora/beta'
+
+const getBaseURL = (event: any) => {
+  if (!event) return defaultBaseURL
+  const protocol = event.node.req.headers['x-forwarded-proto'] || 'http'
+  const host = event.node.req.headers['host']
+  return `${protocol}://${host}${defaultBaseURL}`
+}
+
+const formatPhilosopher = (p: any, baseURL: string) => {
   if (!p) return null
-  // Return path without baseUrl - Nuxt Image/IPX will add the base correctly
   return {
     ...p,
     era: p.era || 'Unknown Era',
-    portrait: p.portrait ? `/api/img/philosopher/${p.id}` : '',
+    portrait: p.portrait ? `${baseURL}/api/img/philosopher/${p.id}` : '',
     conversationCount: p._count?.conversations || 0
+  }
+}
+
+const formatUser = (u: any, baseURL: string) => {
+  if (!u) return null
+  return {
+    ...u,
+    avatar: u.avatar ? `${baseURL}/api/img/user/${u.id}` : '',
+    conversationCount: u._count?.conversations || 0
   }
 }
 
@@ -22,7 +40,7 @@ export const queryResolvers = {
     },
 
     philosophers: async (_: unknown, { era, search }: { era?: string, search?: string }, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.default, 'list philosophers')
+      await applyRateLimit(context.event, RATE_LIMITS.default, 'list philosophers')
       const where: Record<string, unknown> = {}
 
       if (era) where.era = era
@@ -39,11 +57,11 @@ export const queryResolvers = {
           _count: { select: { conversations: { where: { isPublic: true, deletedAt: null } } } }
         }
       })
-      return philosophers.map(formatPhilosopher)
+      return philosophers.map(p => formatPhilosopher(p, getBaseURL(context.event)))
     },
 
     philosopher: async (_: unknown, { slug }: { slug: string }, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.default, 'view philosopher')
+      await applyRateLimit(context.event, RATE_LIMITS.default, 'view philosopher')
 
       const philosopher = await prisma.philosopher.findFirst({
         where: { slug },
@@ -52,11 +70,11 @@ export const queryResolvers = {
         }
       })
 
-      return formatPhilosopher(philosopher)
+      return formatPhilosopher(philosopher, getBaseURL(context.event))
     },
 
     feed: async (_: unknown, { limit = 50, search, philosopherSlug }: { limit?: number, search?: string, philosopherSlug?: string }, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.default, 'feed')
+      await applyRateLimit(context.event, RATE_LIMITS.default, 'feed')
 
       const user = await getCurrentUser(context.event)
 
@@ -95,7 +113,9 @@ export const queryResolvers = {
         edges: conversations.map((c: any) => ({
           ...c,
           likeCount: c._count.likes,
-          isLikedByMe: c.likes.length > 0
+          isLikedByMe: c.likes.length > 0,
+          user: formatUser(c.user, getBaseURL(context.event)),
+          philosopher: formatPhilosopher(c.philosopher, getBaseURL(context.event))
         })),
         pageInfo: {
           hasNextPage: false,
@@ -140,7 +160,9 @@ export const queryResolvers = {
       return {
         ...conversation,
         likeCount: conversation._count.likes,
-        isLikedByMe: (conversation as any).isLikedByMe
+        isLikedByMe: (conversation as any).isLikedByMe,
+        user: formatUser(conversation.user, getBaseURL(context.event)),
+        philosopher: formatPhilosopher(conversation.philosopher, getBaseURL(context.event))
       }
     },
 
@@ -162,7 +184,9 @@ export const queryResolvers = {
         likeCount: c._count?.likes || 0,
         isLikedByMe: false, // Own conversations
         forkCount: c.forkCount || 0,
-        isAnonymous: c.isAnonymous || false
+        isAnonymous: c.isAnonymous || false,
+        user: formatUser(c.user, getBaseURL(context.event)),
+        philosopher: formatPhilosopher(c.philosopher, getBaseURL(context.event))
       }))
     },
 
@@ -207,7 +231,9 @@ export const queryResolvers = {
         return {
           ...c,
           likeCount: c._count?.likes || 0,
-          isLikedByMe
+          isLikedByMe,
+          user: formatUser(c.user, getBaseURL(context.event)),
+          philosopher: formatPhilosopher(c.philosopher, getBaseURL(context.event))
         }
       }))
 
@@ -221,7 +247,7 @@ export const queryResolvers = {
     },
 
     user: async (_: unknown, { username }: { username: string }, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.default, 'view user')
+      await applyRateLimit(context.event, RATE_LIMITS.default, 'view user')
       // Use findFirst with case-insensitive mode to allow flexibility
 
       const user = await prisma.user.findFirst({
@@ -229,10 +255,7 @@ export const queryResolvers = {
         include: { _count: { select: { conversations: { where: { isPublic: true, deletedAt: null } } } } }
       })
       if (!user) return null
-      return {
-        ...user,
-        conversationCount: user._count.conversations
-      }
+      return formatUser(user, getBaseURL(context.event))
     },
 
     myNotifications: async (_: unknown, { limit = 20, unreadOnly = false }: { limit?: number, unreadOnly?: boolean }, context: Context) => {
@@ -260,7 +283,7 @@ export const queryResolvers = {
       const { requireAdmin } = await import('../../utils/rbac')
       await requireAdmin(context.event)
 
-      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin list users')
+      await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin list users')
 
       const users = await prisma.user.findMany({
         take: limit,
@@ -279,9 +302,10 @@ export const queryResolvers = {
         }
       })
 
+      const baseURL = getBaseURL(context.event)
       return users.map(u => ({
         ...u,
-        avatar: u.avatar ? `/api/img/user/${u.id}` : '',
+        avatar: u.avatar ? `${baseURL}/api/img/user/${u.id}` : '',
         conversationCount: u._count.conversations
       }))
     },
@@ -290,7 +314,7 @@ export const queryResolvers = {
       const { requireAdmin } = await import('../../utils/rbac')
       await requireAdmin(context.event)
 
-      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin conversations')
+      await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin conversations')
 
       const take = limit + 1
       const where: Record<string, unknown> = {
@@ -323,18 +347,8 @@ export const queryResolvers = {
       return {
         edges: edges.map((c: any) => ({
           ...c,
-          user: c.user
-            ? {
-              ...c.user,
-              avatar: c.user.avatar ? `/api/img/user/${c.user.id}` : ''
-            }
-            : null,
-          philosopher: c.philosopher
-            ? {
-              ...c.philosopher,
-              portrait: c.philosopher.portrait ? `/api/img/philosopher/${c.philosopher.id}` : ''
-            }
-            : null,
+          user: formatUser(c.user, getBaseURL(context.event)),
+          philosopher: formatPhilosopher(c.philosopher, getBaseURL(context.event)),
           likeCount: c._count.likes,
           isLikedByMe: false
         })),

@@ -102,11 +102,15 @@ useHead({
             <!-- Portrait -->
             <div class="w-full md:w-1/3 flex-shrink-0">
               <div class="portrait-frame rounded-lg overflow-hidden">
-                <img
+                <NuxtImg
                   :src="philosopher.portrait"
                   :alt="philosopher.name"
-                  class="w-full aspect-[3/4] object-cover"
-                >
+                  loading="eager"
+                  width="400"
+                  height="533"
+                  fit="cover"
+                  class="w-full aspect-[3/4] object-cover bg-stone-200 dark:bg-stone-800"
+                />
               </div>
             </div>
 

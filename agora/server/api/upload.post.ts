@@ -1,5 +1,12 @@
-// Avatar upload API - returns base64 data URL for database storage
-// This approach works in k3s without persistent storage
+/**
+ * Avatar/Image upload API
+ * Uploads to MinIO object storage if configured, otherwise falls back to base64 (legacy)
+ */
+import {
+  isMinioEnabled,
+  uploadImage,
+  generateImageKey
+} from '../utils/minio'
 
 export default defineEventHandler(async (event) => {
   const files = await readMultipartFormData(event)
@@ -37,7 +44,30 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Convert to base64 data URL
+  // Get file extension from content type
+  const extMap: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif'
+  }
+  const extension = extMap[contentType] || 'png'
+
+  // Use MinIO if configured, otherwise fall back to base64
+  if (isMinioEnabled()) {
+    // Generate unique key using a random ID (will be replaced with actual user/philosopher ID by caller)
+    const tempId = crypto.randomUUID()
+    const key = generateImageKey('avatar', tempId, extension)
+
+    const minioUrl = await uploadImage(file.data, key, contentType)
+
+    return {
+      url: minioUrl
+    }
+  }
+
+  // Fallback: Convert to base64 data URL (legacy mode)
+  console.warn('[upload] MinIO not configured, falling back to base64 storage')
   const base64 = file.data.toString('base64')
   const dataUrl = `data:${contentType};base64,${base64}`
 

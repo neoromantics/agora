@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // CommentItem - Individual comment with replies, likes, and actions
+import { useHydrationSafeFormatter } from '~/composables/useHydrationSafeDate'
 
 interface User {
   id: string
@@ -68,6 +69,9 @@ function formatTimeAgo(dateStr: string): string {
   if (diffDays < 7) return `${diffDays}d ago`
   return date.toLocaleDateString()
 }
+
+// Hydration-safe formatter for SSR
+const formatTimeSafe = useHydrationSafeFormatter(formatTimeAgo)
 
 async function toggleLike() {
   if (!token.value || isLiking.value) return
@@ -193,8 +197,17 @@ function handleNestedDelete(commentId: string) {
       :to="`/user/${comment.user.username}`"
       class="flex-shrink-0"
     >
-      <UAvatar
+      <NuxtImg
+        v-if="comment.user.avatar"
         :src="comment.user.avatar"
+        :alt="comment.user.name"
+        width="32"
+        height="32"
+        fit="cover"
+        class="w-8 h-8 rounded-full object-cover ring-1 ring-stone-200 dark:ring-stone-700"
+      />
+      <UAvatar
+        v-else
         :alt="comment.user.name"
         size="sm"
       />
@@ -211,7 +224,7 @@ function handleNestedDelete(commentId: string) {
           {{ comment.user.name }}
         </NuxtLink>
         <span class="text-xs text-stone-400">
-          <ClientOnly>{{ formatTimeAgo(comment.createdAt) }}</ClientOnly>
+          {{ formatTimeSafe(comment.createdAt) }}
         </span>
       </div>
 

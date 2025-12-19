@@ -1,6 +1,6 @@
 import type { Message, PhilosopherContext } from '../types/llm'
 import { CircuitBreaker } from '../services/circuitBreaker'
-import { RateLimiter } from '../services/rateLimiter'
+import { checkLimitByKey, RATE_LIMITS } from './rateLimit'
 import { PromptBuilder } from '../services/promptBuilder'
 import { FallbackService } from '../services/fallbacks'
 import { getLLMProvider } from '../providers'
@@ -30,8 +30,11 @@ export async function generatePhilosopherResponse(
   }
 
   // Check user rate limit
-  if (userId && !RateLimiter.checkUserLimit(userId)) {
-    return 'I appreciate your enthusiasm, but let us pause for a moment. Even Socrates took breaks between dialogues. Please wait a minute before continuing our conversation.'
+  if (userId) {
+    const { allowed } = await checkLimitByKey(`user:${userId}:llm`, RATE_LIMITS.llm)
+    if (!allowed) {
+      return 'I appreciate your enthusiasm, but let us pause for a moment. Even Socrates took breaks between dialogues. Please wait a minute before continuing our conversation.'
+    }
   }
 
   // Check if LLM is disabled

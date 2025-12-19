@@ -20,5 +20,8 @@ export default defineEventHandler((event) => {
   // Content Security Policy (Basic)
   // We allow scripts from self and our known CDN (fonts/images)
   // We don't want to be too strict to break Nuxt scripts, so we allow 'unsafe-inline' for now which Nuxt needs often
-  setHeader(event, 'Content-Security-Policy', 'default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\' https://fonts.googleapis.com; font-src \'self\' https://fonts.gstatic.com; img-src \'self\' data: https:; connect-src \'self\' https:;')
+  const isDev = process.env.NODE_ENV === 'development'
+  const scriptSrc = isDev ? '\'self\' \'unsafe-inline\' \'unsafe-eval\'' : '\'self\' \'unsafe-inline\''
+
+  setHeader(event, 'Content-Security-Policy', `default-src 'self'; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: wss:;`)
 })

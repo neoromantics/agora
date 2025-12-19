@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { formatDistanceToNow } from 'date-fns'
+import { useHydrationSafeFormatter } from '~/composables/useHydrationSafeDate'
 
 definePageMeta({
   layout: 'admin',
@@ -123,6 +124,10 @@ async function executeDelete() {
     conversationToDelete.value = null
   }
 }
+// Hydration-safe date formatter
+const formatDate = useHydrationSafeFormatter((dateStr: string) =>
+  formatDistanceToNow(new Date(dateStr), { addSuffix: true })
+)
 </script>
 
 <template>
@@ -150,110 +155,118 @@ async function executeDelete() {
     </div>
 
     <!-- Grid -->
-    <ClientOnly>
-      <div class="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-        <div
-          v-for="conv in filteredConversations"
-          :key="conv.id"
-          class="group relative bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden hover:shadow-lg hover:border-stone-300 dark:hover:border-stone-700 transition-all duration-all flex flex-col"
-        >
-          <!-- Header: Title & Status -->
-          <div class="p-4 border-b border-stone-100 dark:border-stone-800/50 bg-stone-50/50 dark:bg-stone-800/20">
-            <div class="flex justify-between items-start gap-2 mb-2">
-              <UBadge
-                :color="conv.isPublic ? 'primary' : 'neutral'"
-                :variant="conv.isPublic ? 'subtle' : 'outline'"
-                size="xs"
-              >
-                {{ conv.isPublic ? 'Public' : 'Private' }}
-              </UBadge>
-              <span class="text-xs text-stone-500">
-                {{ formatDistanceToNow(new Date(conv.createdAt), { addSuffix: true }) }}
-              </span>
-            </div>
-            <NuxtLink
-              :to="`/conversation/${conv.id}`"
-              class="font-medium text-stone-900 dark:text-stone-100 line-clamp-1 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-              :title="conv.title"
-            >
-              {{ conv.title }}
-            </NuxtLink>
-            <p class="text-xs text-stone-500 mt-1 line-clamp-2 min-h-[2.5em]">
-              {{ conv.summary || 'No summary available.' }}
-            </p>
-          </div>
-
-          <!-- Participants -->
-          <div class="p-4 flex items-center justify-between flex-1">
-            <div class="flex items-center -space-x-2">
-              <NuxtLink
-                v-if="conv.user"
-                :to="`/user/${conv.user.username}`"
-                class="hover:z-10 transition-transform hover:scale-110"
-              >
-                <UAvatar
-                  :src="conv.user.avatar"
-                  :alt="conv.user.name"
-                  size="sm"
-                  class="ring-2 ring-white dark:ring-stone-900 cursor-pointer"
-                  :ui="{ chip: { base: 'hidden' } } as any"
-                />
-              </NuxtLink>
-              <UAvatar
-                v-else
-                icon="i-lucide-user"
-                size="sm"
-                class="ring-2 ring-white dark:ring-stone-900 bg-stone-100 dark:bg-stone-800"
-              />
-
-              <UAvatar
-                :src="conv.philosopher.portrait"
-                :alt="conv.philosopher.name"
-                size="sm"
-                class="ring-2 ring-white dark:ring-stone-900"
-              />
-            </div>
-            <div class="text-xs text-stone-500 flex flex-wrap items-center gap-1 min-w-0">
-              <span
-                v-if="conv.user"
-                class="truncate max-w-[60px]"
-              >{{ conv.user.username }}</span>
-              <span
-                v-else
-                class="italic"
-              >Anon</span>
-              <span class="text-stone-300 hidden sm:inline">with</span>
-              <span class="truncate max-w-[60px]">{{ conv.philosopher.name }}</span>
-            </div>
-          </div>
-
-          <!-- Footer: Stats & Actions -->
-          <div class="p-3 border-t border-stone-100 dark:border-stone-800 flex justify-between items-center bg-stone-50/30 dark:bg-stone-800/10">
-            <div class="flex gap-3 text-xs text-stone-500">
-              <span class="flex items-center gap-1">
-                <UIcon
-                  name="i-lucide-eye"
-                  class="w-3 h-3"
-                /> {{ conv.viewCount }}
-              </span>
-              <span class="flex items-center gap-1">
-                <UIcon
-                  name="i-lucide-heart"
-                  class="w-3 h-3"
-                /> {{ conv.likeCount }}
-              </span>
-            </div>
-            <UButton
-              color="error"
-              variant="ghost"
-              icon="i-lucide-trash-2"
+    <div class="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+      <div
+        v-for="conv in filteredConversations"
+        :key="conv.id"
+        class="group relative bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden hover:shadow-lg hover:border-stone-300 dark:hover:border-stone-700 transition-all duration-all flex flex-col"
+      >
+        <!-- Header: Title & Status -->
+        <div class="p-4 border-b border-stone-100 dark:border-stone-800/50 bg-stone-50/50 dark:bg-stone-800/20">
+          <div class="flex justify-between items-start gap-2 mb-2">
+            <UBadge
+              :color="conv.isPublic ? 'primary' : 'neutral'"
+              :variant="conv.isPublic ? 'subtle' : 'outline'"
               size="xs"
-              @click="confirmDelete(conv)"
-            />
+            >
+              {{ conv.isPublic ? 'Public' : 'Private' }}
+            </UBadge>
+            <span class="text-xs text-stone-500">
+              {{ formatDate(conv.createdAt) }}
+            </span>
+          </div>
+          <NuxtLink
+            :to="`/conversation/${conv.id}`"
+            class="font-medium text-stone-900 dark:text-stone-100 line-clamp-1 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+            :title="conv.title"
+          >
+            {{ conv.title }}
+          </NuxtLink>
+          <p class="text-xs text-stone-500 mt-1 line-clamp-2 min-h-[2.5em]">
+            {{ conv.summary || 'No summary available.' }}
+          </p>
+        </div>
+
+        <!-- Participants -->
+        <div class="p-4 flex items-center justify-between flex-1">
+          <div class="flex items-center -space-x-2">
+            <NuxtLink
+              v-if="conv.user"
+              :to="`/user/${conv.user.username}`"
+              class="hover:z-10 transition-transform hover:scale-110"
+            >
+              <img
+                v-if="conv.user.avatar"
+                :src="conv.user.avatar"
+                :alt="conv.user.name"
+                class="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-stone-900 cursor-pointer"
+              >
+              <span
+                v-else
+                class="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 ring-2 ring-white dark:ring-stone-900 flex items-center justify-center"
+              >
+                <UIcon
+                  name="i-lucide-user"
+                  class="w-4 h-4 text-stone-500"
+                />
+              </span>
+            </NuxtLink>
+            <span
+              v-else
+              class="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 ring-2 ring-white dark:ring-stone-900 flex items-center justify-center"
+            >
+              <UIcon
+                name="i-lucide-user"
+                class="w-4 h-4 text-stone-500"
+              />
+            </span>
+
+            <img
+              :src="conv.philosopher.portrait"
+              :alt="conv.philosopher.name"
+              class="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-stone-900"
+            >
+          </div>
+          <div class="text-xs text-stone-500 flex flex-wrap items-center gap-1 min-w-0">
+            <span
+              v-if="conv.user"
+              class="truncate max-w-[60px]"
+            >{{ conv.user.username }}</span>
+            <span
+              v-else
+              class="italic"
+            >Anon</span>
+            <span class="text-stone-300 hidden sm:inline">with</span>
+            <span class="truncate max-w-[60px]">{{ conv.philosopher.name }}</span>
           </div>
         </div>
+
+        <!-- Footer: Stats & Actions -->
+        <div class="p-3 border-t border-stone-100 dark:border-stone-800 flex justify-between items-center bg-stone-50/30 dark:bg-stone-800/10">
+          <div class="flex gap-3 text-xs text-stone-500">
+            <span class="flex items-center gap-1">
+              <UIcon
+                name="i-lucide-eye"
+                class="w-3 h-3"
+              /> {{ conv.viewCount }}
+            </span>
+            <span class="flex items-center gap-1">
+              <UIcon
+                name="i-lucide-heart"
+                class="w-3 h-3"
+              /> {{ conv.likeCount }}
+            </span>
+          </div>
+          <UButton
+            color="error"
+            variant="ghost"
+            icon="i-lucide-trash-2"
+            size="xs"
+            @click="confirmDelete(conv)"
+          />
+        </div>
       </div>
-    </ClientOnly>
+    </div>
 
     <!-- Empty State -->
     <div

@@ -26,9 +26,13 @@ const state = reactive({
 })
 
 const fileInput = ref<HTMLInputElement | null>(null)
-const isUploading = ref(false)
 const isSaving = ref(false)
 const showPasswordSection = ref(false)
+
+// Use standardized upload composable
+const { isUploading, handleFileChange } = useImageUpload({
+  onSuccess: (url: string) => { state.avatar = url }
+})
 
 // Schema for validation
 const schema = z.object({
@@ -57,37 +61,6 @@ const schema = z.object({
   message: 'Passwords don\'t match',
   path: ['confirmPassword']
 })
-
-async function handleFileChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  if (!input.files || input.files.length === 0) return
-
-  isUploading.value = true
-  const file = input.files[0]
-
-  if (file && file.size > 500 * 1024) {
-    toast.add({ title: 'File too large', description: 'Please choose an image under 500KB', color: 'error' })
-    isUploading.value = false
-    return
-  }
-
-  const formData = new FormData()
-  formData.append('file', file as Blob)
-
-  try {
-    const data = await $fetch<{ url: string }>('/api/upload', {
-      method: 'POST',
-      body: formData
-    })
-    state.avatar = data.url
-    toast.add({ title: 'Photo uploaded!', description: 'Click "Save" to apply.', color: 'success' })
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Upload failed'
-    toast.add({ title: 'Upload failed', description: message, color: 'error' })
-  } finally {
-    isUploading.value = false
-  }
-}
 
 async function onSubmit() {
   isSaving.value = true
@@ -206,7 +179,7 @@ function triggerFileInput() {
               Change photo
             </UButton>
             <p class="text-xs text-stone-400 mt-1">
-              Max 500KB
+              Max 5MB
             </p>
           </div>
         </div>

@@ -1,4 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
@@ -44,6 +45,12 @@ export default defineNuxtConfig({
     // LLM Provider Configuration
     llmProvider: process.env.LLM_PROVIDER || 'gemini',
     llmModel: process.env.LLM_MODEL || 'gemma-3-27b-it',
+    // MinIO Object Storage
+    minioEndpoint: process.env.NUXT_MINIO_ENDPOINT || '',
+    minioAccessKey: process.env.NUXT_MINIO_ACCESS_KEY || '',
+    minioSecretKey: process.env.NUXT_MINIO_SECRET_KEY || '',
+    minioBucket: process.env.NUXT_MINIO_BUCKET || 'agora',
+    minioUseSsl: process.env.NUXT_MINIO_USE_SSL || 'false',
     // Public (exposed to client)
     public: {
       baseUrl: process.env.NUXT_PUBLIC_BASE_URL || '/agora'
@@ -54,7 +61,7 @@ export default defineNuxtConfig({
     // Prerendering requires DB access, which we don't have during Docker build
     // '/': { prerender: true },
     // '/gallery': { prerender: true },
-    '/api/**': { cors: true },
+    // '/api/**': { cors: true },
     '/admin/**': {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
@@ -66,16 +73,6 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2025-01-15',
 
-  // Nuxt Image - using default ipx provider
-
-  // Nitro server configuration
-  nitro: {
-
-    experimental: {
-      websocket: true
-    }
-  },
-
   eslint: {
     config: {
       stylistic: {
@@ -83,5 +80,26 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
+  },
+
+  // Nuxt Image - configure IPX with correct baseURL for subpath deployment
+  image: {
+    provider: 'ipx',
+    ipx: {
+      // access: { ... } (defaults)
+    },
+    // Configure domains for IPX
+    domains: [
+      'localhost',
+      '127.0.0.1',
+      'vcm-51278.vm.duke.edu',
+      'upload.wikimedia.org',
+      'commons.wikimedia.org',
+      'i.imgur.com',
+      'lh3.googleusercontent.com',
+      'secure.gravatar.com',
+      'server.gravatar.com',
+      'pbs.twimg.com'
+    ]
   }
 })

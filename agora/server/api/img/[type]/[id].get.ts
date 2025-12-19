@@ -1,6 +1,6 @@
-import { prisma } from '../../../utils/db'
+import { ImageService } from '../../../services/ImageService'
 
-export default defineEventHandler(async (event) => {
+export default defineCachedEventHandler(async (event) => {
   const type = getRouterParam(event, 'type')
   const id = getRouterParam(event, 'id')
 
@@ -8,52 +8,39 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Missing type or id' })
   }
 
-  let imageData: string | null = null
+  try {
+    const { buffer, mimeType } = await ImageService.getImage(type, id)
 
-  if (type === 'user') {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: { avatar: true }
-    })
-    imageData = user?.avatar || null
-  } else if (type === 'philosopher') {
-    const philosopher = await prisma.philosopher.findUnique({
-      where: { id },
-      select: { portrait: true }
-    })
-    imageData = philosopher?.portrait || null
-  } else {
-    throw createError({ statusCode: 400, message: 'Invalid type' })
-  }
-
-  if (!imageData) {
-    throw createError({ statusCode: 404, message: 'Image not found' })
-  }
-
-  imageData = imageData.trim()
-
-  // Handle Base64 Data URI
-  if (imageData.startsWith('data:')) {
-    const matches = imageData.match(/^data:([^;]+);base64,([\s\S]+)$/)
-    if (matches && matches[1] && matches[2]) {
-      const mimeType = matches[1]
-      const base64Data = matches[2].replace(/\s/g, '')
-      const buffer = Buffer.from(base64Data, 'base64')
-
-      setHeaders(event, {
-        'Content-Type': mimeType,
-        'Content-Length': buffer.length.toString(),
-        'Cache-Control': 'public, max-age=86400'
-      })
-
-      return buffer
+    // Set Content-Type
+    if (mimeType) {
+      setHeader(event, 'Content-Type', mimeType)
     }
-  }
 
-  // Handle external URL - redirect
-  if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
-    return sendRedirect(event, imageData, 302)
-  }
+    // Set Aggressive Cache Headers (Immutable / 1 Year)
+    // The server-side cache (SWR) handles the "execution" cache,
+    // this header handles the "Browser" cache.
+    setHeader(event, 'Cache-Control', 'public, max-age=31536000, immutable')
 
-  throw createError({ statusCode: 400, message: 'Invalid image format' })
+    return buffer
+  } catch (error: unknown) {
+    // Map Service Errors to HTTP Errors
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    if (message === 'Image not found') {
+      throw createError({ statusCode: 404, message: 'Image not found' })
+    }
+    if (message === 'Invalid image type') {
+      throw createError({ statusCode: 400, message: 'Invalid image type' })
+    }
+    if (message.startsWith('SSRF')) {
+      throw createError({ statusCode: 403, message: 'Access denied' })
+    }
+
+    // Default 500
+    // console.error('Image Service Error:', error)
+    throw createError({ statusCode: 500, message: 'Internal Server Error fetching image' })
+  }
+}, {
+  swr: true,
+  maxAge: 60 * 60 * 24, // Server-Side Cache: 24 Hours
+  name: 'image-proxy'
 })

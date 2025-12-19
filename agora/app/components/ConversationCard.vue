@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Helper to format date
 import { formatRelativeTime } from '~/utils/dateFormat'
+import { useHydrationSafeDate } from '~/composables/useHydrationSafeDate'
 
 const router = useRouter()
 const { token, user: currentUser } = useAuth()
@@ -40,8 +41,11 @@ const emit = defineEmits<{
   (e: 'fork', conversation: Conversation): void
 }>()
 
-// Format date helper - using centralized utility
-const formatDate = formatRelativeTime
+// Format date helper - using hydration-safe composable
+const formattedDate = useHydrationSafeDate(
+  computed(() => props.conversation.createdAt),
+  formatRelativeTime
+)
 
 function handleFork(e: Event) {
   e.preventDefault()
@@ -137,11 +141,13 @@ const displayUserName = computed(() => {
               class="flex-shrink-0 hover:opacity-80 transition-opacity"
               @click.stop
             >
-              <UAvatar
+              <NuxtImg
                 :src="conversation.philosopher.portrait"
                 :alt="conversation.philosopher.name"
-                size="md"
-                class="ring-2 ring-white dark:ring-stone-900"
+                width="32"
+                height="32"
+                fit="cover"
+                class="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-stone-900"
               />
             </NuxtLink>
 
@@ -152,26 +158,39 @@ const displayUserName = computed(() => {
               class="relative z-0 hover:z-20 hover:scale-105 transition-all outline-none"
               @click.stop
             >
-              <UAvatar
-                :src="conversation.user.avatar || undefined"
+              <NuxtImg
+                v-if="conversation.user.avatar"
+                :src="conversation.user.avatar"
                 :alt="conversation.user.name"
-                size="md"
-                class="ring-2 ring-white dark:ring-stone-900"
+                width="32"
+                height="32"
+                fit="cover"
+                class="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-stone-900 cursor-pointer"
               />
+              <span
+                v-else
+                class="w-8 h-8 rounded-full bg-stone-200 dark:bg-stone-800 ring-2 ring-white dark:ring-stone-900 flex items-center justify-center text-stone-500"
+              >
+                <UIcon
+                  name="i-lucide-user"
+                  class="w-4 h-4"
+                />
+              </span>
             </NuxtLink>
-            <UAvatar
+            <span
               v-else
-              icon="i-lucide-user"
-              size="md"
-              class="relative z-0 ring-2 ring-white dark:ring-stone-900 bg-stone-200 dark:bg-stone-800 text-stone-500"
-            />
+              class="w-8 h-8 rounded-full bg-stone-200 dark:bg-stone-800 ring-2 ring-white dark:ring-stone-900 flex items-center justify-center text-stone-500"
+            >
+              <UIcon
+                name="i-lucide-user"
+                class="w-4 h-4"
+              />
+            </span>
           </div>
 
           <!-- Date -->
           <span class="text-xs text-stone-500 font-medium">
-            <ClientOnly>
-              {{ formatDate(conversation.createdAt) }}
-            </ClientOnly>
+            {{ formattedDate }}
           </span>
         </div>
 

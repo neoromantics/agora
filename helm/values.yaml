@@ -28,11 +28,11 @@ ingress:
 # Resource limits
 resources:
   limits:
-    cpu: 500m
-    memory: 512Mi
+    cpu: 1000m
+    memory: 1536Mi
   requests:
-    cpu: 100m
-    memory: 256Mi
+    cpu: 250m
+    memory: 512Mi
 
 # Autoscaling
 autoscaling:
@@ -48,6 +48,7 @@ secrets:
 # Environment variables
 env:
   NODE_ENV: production
+  NODE_OPTIONS: "--max-old-space-size=512"
   NUXT_PUBLIC_BASE_URL: /agora
 
 # Liveness and readiness probes
@@ -101,3 +102,10 @@ redis:
   master:
     persistence:
       size: 5Gi
+
+# MinIO configuration - custom deployment (not Bitnami chart)
+minio:
+  enabled: true
+  bucket: agora
+  persistence:
+    size: 10Gi

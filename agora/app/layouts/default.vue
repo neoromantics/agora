@@ -55,37 +55,31 @@ const userMenuItems = computed(() => [
         <div class="flex items-center gap-2">
           <UColorModeButton />
 
-          <ClientOnly>
-            <template v-if="isAuthenticated">
-              <UDropdownMenu :items="userMenuItems">
-                <UButton
-                  variant="ghost"
-                  color="neutral"
-                  trailing-icon="i-lucide-chevron-down"
-                >
-                  <UAvatar
-                    :src="user?.avatar || undefined"
-                    :alt="user?.name"
-                    size="xs"
-                  />
-                </UButton>
-              </UDropdownMenu>
-            </template>
-
-            <template v-else>
+          <template v-if="isAuthenticated">
+            <UDropdownMenu :items="userMenuItems">
               <UButton
-                to="/auth/login"
                 variant="ghost"
                 color="neutral"
+                trailing-icon="i-lucide-chevron-down"
               >
-                Sign In
+                <UAvatar
+                  :src="user?.avatar || undefined"
+                  :alt="user?.name"
+                  size="xs"
+                />
               </UButton>
-            </template>
+            </UDropdownMenu>
+          </template>
 
-            <template #fallback>
-              <div class="w-24 h-9" />
-            </template>
-          </ClientOnly>
+          <template v-else>
+            <UButton
+              to="/auth/login"
+              variant="ghost"
+              color="neutral"
+            >
+              Sign In
+            </UButton>
+          </template>
         </div>
       </UContainer>
     </header>

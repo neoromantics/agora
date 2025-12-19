@@ -66,6 +66,25 @@ spec:
                   name: {{ .Values.secrets.existingSecret }}
                   key: gemini-api-key
 
+            {{- if .Values.minio.enabled }}
+            - name: NUXT_MINIO_ENDPOINT
+              value: {{ include "agora.fullname" . }}-minio:9000
+            - name: NUXT_MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: minio-root-user
+            - name: NUXT_MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: minio-root-password
+            - name: NUXT_MINIO_BUCKET
+              value: "agora"
+            - name: NUXT_MINIO_USE_SSL
+              value: "false"
+            {{- end }}
+
           livenessProbe:
             httpGet:
               path: {{ .Values.probes.liveness.path }}

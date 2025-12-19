@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Notifications Page
 import { formatRelativeTime } from '~/utils/dateFormat'
+import { useHydrationSafeFormatter } from '~/composables/useHydrationSafeDate'
 
 definePageMeta({
   layout: 'default',
@@ -96,8 +97,8 @@ async function markAllAsRead() {
   unreadCount.value = 0
 }
 
-// Format time helper - using centralized utility
-const formatTime = formatRelativeTime
+// Format time helper - using hydration-safe formatter
+const formatTime = useHydrationSafeFormatter(formatRelativeTime)
 
 function getIcon(type: string): string {
   switch (type) {
@@ -193,7 +194,7 @@ useHead({ title: 'Notifications | Agora' })
                 {{ notif.message }}
               </p>
               <p class="text-xs text-stone-400 mt-1">
-                <ClientOnly>{{ formatTime(notif.createdAt) }}</ClientOnly>
+                {{ formatTime(notif.createdAt) }}
               </p>
             </div>
             <UBadge

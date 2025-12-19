@@ -18,7 +18,7 @@ export const mutationResolvers = {
   Mutation: {
     chatEphemeral: async (_: unknown, { philosopherId, messages }: { philosopherId: string, messages: { role: string, content: string }[] }, context: Context) => {
       // Rate limit: 20 LLM requests per minute
-      applyRateLimit(context.event, RATE_LIMITS.llm, 'AI conversation')
+      await applyRateLimit(context.event, RATE_LIMITS.llm, 'AI conversation')
 
       // No auth required for ephemeral chat
       const philosopher = await prisma.philosopher.findUnique({
@@ -51,7 +51,7 @@ export const mutationResolvers = {
 
     register: async (_: unknown, { email, password, name, username }: { email: string, password: string, name: string, username: string }, context: Context) => {
       // Rate limit: 10 auth attempts per minute
-      applyRateLimit(context.event, RATE_LIMITS.auth, 'registration')
+      await applyRateLimit(context.event, RATE_LIMITS.auth, 'registration')
 
       const existing = await prisma.user.findFirst({
         where: { OR: [{ email }, { username }] }
@@ -71,7 +71,7 @@ export const mutationResolvers = {
 
     login: async (_: unknown, { identifier, password }: { identifier: string, password: string }, context: Context) => {
       // Rate limit: 10 auth attempts per minute
-      applyRateLimit(context.event, RATE_LIMITS.auth, 'login')
+      await applyRateLimit(context.event, RATE_LIMITS.auth, 'login')
 
       const user = await prisma.user.findFirst({
         where: {
@@ -96,7 +96,7 @@ export const mutationResolvers = {
 
     requestPasswordReset: async (_: unknown, { email }: { email: string }, context: Context) => {
       // Rate limit: 5 password reset attempts per hour
-      applyRateLimit(context.event, RATE_LIMITS.passwordReset, 'password reset')
+      await applyRateLimit(context.event, RATE_LIMITS.passwordReset, 'password reset')
 
       // Always return success to prevent email enumeration
       const user = await prisma.user.findUnique({ where: { email } })
@@ -733,7 +733,7 @@ export const mutationResolvers = {
     },
 
     adminDeleteConversation: async (_: unknown, { conversationId }: { conversationId: string }, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
 
       await prisma.conversation.delete({ where: { id: conversationId } })
@@ -741,7 +741,7 @@ export const mutationResolvers = {
     },
 
     updateUserRole: async (_: unknown, { userId, role }: { userId: string, role: string }, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
 
       // Validate role
@@ -756,14 +756,14 @@ export const mutationResolvers = {
     },
 
     adminDeleteUser: async (_: unknown, { userId }: { userId: string }, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
       await prisma.user.delete({ where: { id: userId } })
       return true
     },
 
     adminCreateUser: async (_: unknown, args: { email: string, password: string, name: string, username: string, role?: string }, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
 
       const { email, password, name, username, role = 'USER' } = args
@@ -796,7 +796,7 @@ export const mutationResolvers = {
     },
 
     adminUpdateUser: async (_: unknown, args: { userId: string, name?: string, username?: string, email?: string, bio?: string, avatar?: string, role?: string, newPassword?: string }, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
 
       const { userId, newPassword, role, ...profileData } = args
@@ -838,14 +838,14 @@ export const mutationResolvers = {
     },
 
     adminDeleteComment: async (_: unknown, { commentId }: { commentId: string }, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
       await prisma.comment.delete({ where: { id: commentId } })
       return true
     },
 
     createPhilosopher: async (_: unknown, args: any, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
       return prisma.philosopher.create({
         data: args
@@ -853,7 +853,7 @@ export const mutationResolvers = {
     },
 
     updatePhilosopher: async (_: unknown, args: any, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
       const { id, ...data } = args
       return prisma.philosopher.update({
@@ -863,7 +863,7 @@ export const mutationResolvers = {
     },
 
     deletePhilosopher: async (_: unknown, { id }: { id: string }, context: Context) => {
-      applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
+      await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
       await prisma.philosopher.delete({ where: { id } })
       return true

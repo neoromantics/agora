@@ -88,9 +88,10 @@ export async function getCurrentUser(event: H3Event) {
   if (!user) return null
 
   // Transform avatar to URL path to prevent large Base64 in cookies
+  const baseURL = process.env.NUXT_PUBLIC_BASE_URL || '/agora/beta'
   return {
     ...user,
-    avatar: user.avatar ? `/api/img/user/${user.id}` : null
+    avatar: user.avatar ? `${baseURL}/api/img/user/${user.id}` : null
   }
 }
 

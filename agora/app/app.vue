@@ -1,12 +1,17 @@
 <script setup lang="ts">
 // Agora - Main App Layout
+// Use auth composable
+const { initialize, user } = useAuth()
+
 useHead({
   meta: [
     { name: 'viewport', content: 'width=device-width, initial-scale=1' }
   ],
-  link: [
-    { rel: 'icon', type: 'image/jpeg', href: '/favicon.jpg' }
-  ],
+  link: computed(() => [
+    { rel: 'icon', type: 'image/jpeg', href: '/favicon.jpg' },
+    // Preload user avatar to prevent flash/delay on navigation
+    ...(user.value?.avatar ? [{ rel: 'preload' as const, as: 'image' as const, href: user.value.avatar }] : [])
+  ]),
   htmlAttrs: {
     lang: 'en'
   }
@@ -22,9 +27,6 @@ useSeoMeta({
   ogDescription: description,
   twitterCard: 'summary_large_image'
 })
-
-// Use auth composable
-const { initialize } = useAuth()
 
 // Initialize auth state on mount
 onMounted(() => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { io, type Socket } from 'socket.io-client'
 import { formatTime as formatTimeUtil } from '~/utils/dateFormat'
+import { useHydrationSafeFormatter } from '~/composables/useHydrationSafeDate'
 
 definePageMeta({
   layout: 'blank'
@@ -455,7 +456,9 @@ async function togglePublic() {
   }
 }
 
-const formatTime = formatTimeUtil
+// Hydration-safe time formatter
+const formatTime = useHydrationSafeFormatter(formatTimeUtil)
+const formatTimeSafe = useHydrationSafeFormatter(formatTimeUtil)
 
 onUnmounted(() => socket.value?.disconnect())
 
@@ -530,7 +533,7 @@ async function deleteConversation() {
               <img
                 :src="philosopher.portrait"
                 :alt="philosopher.name"
-                class="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-stone-300 dark:border-stone-700 flex-shrink-0"
+                class="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-stone-300 dark:ring-stone-700 flex-shrink-0 bg-stone-200 dark:bg-stone-800"
               >
               <div class="min-w-0">
                 <h1 class="font-serif font-medium text-stone-800 dark:text-stone-100 text-sm sm:text-base truncate">
@@ -661,7 +664,7 @@ async function deleteConversation() {
           </div>
 
           <div class="flex justify-center items-center gap-2 text-sm text-stone-500">
-            <span>Started <ClientOnly>{{ formatTimeUtil(conversation.createdAt) }}</ClientOnly></span>
+            <span>Started {{ formatTimeSafe(conversation.createdAt) }}</span>
             <span v-if="displayUser">&bull; by {{ displayUser.name }}</span>
           </div>
         </div>
@@ -676,7 +679,10 @@ async function deleteConversation() {
               <img
                 :src="philosopher.portrait"
                 :alt="philosopher.name"
-                class="w-24 h-24 rounded-full object-cover mx-auto mb-4 portrait-frame hover:ring-2 hover:ring-indigo-500 transition-all cursor-pointer"
+                loading="eager"
+                width="96"
+                height="96"
+                class="w-24 h-24 rounded-full object-cover mx-auto mb-4 portrait-frame hover:ring-2 hover:ring-indigo-500 transition-all cursor-pointer bg-stone-200 dark:bg-stone-800"
               >
             </NuxtLink>
             <h2 class="text-xl font-serif font-medium text-stone-800 dark:text-stone-100 mb-2">
@@ -744,12 +750,11 @@ async function deleteConversation() {
                 :to="`/person/${philosopher.slug}`"
                 class="block cursor-pointer hover:opacity-80 transition-opacity"
               >
-                <UAvatar
+                <img
                   :src="philosopher.portrait"
                   :alt="philosopher.name"
-                  size="sm"
-                  class="border-2 border-stone-300 dark:border-stone-700"
-                />
+                  class="w-6 h-6 rounded-full object-cover ring-2 ring-stone-300 dark:ring-stone-700"
+                >
               </NuxtLink>
 
               <!-- User Avatar -->
@@ -758,21 +763,33 @@ async function deleteConversation() {
                 :to="`/user/${displayUser.username}`"
                 class="block cursor-pointer hover:opacity-80 transition-opacity"
               >
-                <UAvatar
-                  :src="displayUser.avatar || undefined"
+                <img
+                  v-if="displayUser.avatar"
+                  :src="displayUser.avatar"
                   :alt="displayUser.name"
-                  size="sm"
-                  class="border-2 border-indigo-300 dark:border-indigo-700"
-                />
+                  class="w-6 h-6 rounded-full object-cover ring-2 ring-indigo-300 dark:ring-indigo-700"
+                >
+                <span
+                  v-else
+                  class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-950 ring-2 ring-indigo-300 dark:ring-indigo-700 flex items-center justify-center"
+                >
+                  <UIcon
+                    name="i-lucide-user"
+                    class="w-3 h-3 text-indigo-600 dark:text-indigo-400"
+                  />
+                </span>
               </NuxtLink>
 
               <!-- Anonymous/Fallback Avatar -->
-              <UAvatar
+              <span
                 v-else
-                icon="i-lucide-user"
-                size="sm"
-                class="bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400"
-              />
+                class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center"
+              >
+                <UIcon
+                  name="i-lucide-user"
+                  class="w-3 h-3 text-indigo-600 dark:text-indigo-400"
+                />
+              </span>
             </div>
 
             <!-- Message bubble container -->
@@ -803,7 +820,7 @@ async function deleteConversation() {
                   {{ message.content }}
                 </p>
                 <p class="text-xs text-stone-400 mt-2">
-                  <ClientOnly>{{ formatTime(message.createdAt) }}</ClientOnly>
+                  {{ formatTime(message.createdAt) }}
                 </p>
 
                 <!-- Reaction Placeholder -->
