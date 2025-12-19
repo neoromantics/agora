@@ -25,6 +25,7 @@ watch(token, (newToken) => {
 const state = reactive({
   name: '',
   username: '',
+  email: '',
   bio: '',
   currentPassword: '',
   newPassword: '',
@@ -37,6 +38,7 @@ watch(user, (newUser) => {
   if (newUser) {
     state.name = newUser.name || ''
     state.username = newUser.username || ''
+    state.email = newUser.email || ''
     state.bio = newUser.bio || ''
     state.avatar = newUser.avatar || ''
   }
@@ -120,7 +122,8 @@ async function onSubmit() {
       name: state.name,
       bio: state.bio,
       avatar: state.avatar,
-      username: state.username
+      username: state.username,
+      email: state.email
     }
 
     if (state.newPassword) {
@@ -133,11 +136,12 @@ async function onSubmit() {
       headers: getAuthHeaders(),
       body: {
         query: `
-          mutation UpdateProfile($name: String, $bio: String, $avatar: String, $username: String, $currentPassword: String, $newPassword: String) {
-            updateProfile(name: $name, bio: $bio, avatar: $avatar, username: $username, currentPassword: $currentPassword, newPassword: $newPassword) {
+          mutation UpdateProfile($name: String, $bio: String, $avatar: String, $username: String, $email: String, $currentPassword: String, $newPassword: String) {
+            updateProfile(name: $name, bio: $bio, avatar: $avatar, username: $username, email: $email, currentPassword: $currentPassword, newPassword: $newPassword) {
               id
               username
               name
+              email
               avatar
               bio
             }
@@ -277,6 +281,19 @@ function triggerFileInput() {
                   <span class="text-stone-400">@</span>
                 </template>
               </UInput>
+            </UFormField>
+
+            <!-- Email -->
+            <UFormField
+              label="Email"
+              name="email"
+            >
+              <UInput
+                v-model="state.email"
+                type="email"
+                placeholder="your@email.com"
+                size="lg"
+              />
             </UFormField>
 
             <!-- Bio -->

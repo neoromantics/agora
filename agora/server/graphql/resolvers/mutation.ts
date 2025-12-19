@@ -623,7 +623,7 @@ export const mutationResolvers = {
 
     updateProfile: async (_: unknown, args: any, context: Context) => {
       const user = await requireAuth(context.event)
-      const { name, bio, avatar, username, currentPassword, newPassword } = args
+      const { name, bio, avatar, username, email, currentPassword, newPassword } = args
       const data: any = {}
 
       if (name) data.name = name
@@ -634,6 +634,12 @@ export const mutationResolvers = {
         const existing = await prisma.user.findUnique({ where: { username } })
         if (existing) throw new Error('Username taken')
         data.username = username
+      }
+      if (email && email !== user.email) {
+        // Check availability
+        const existing = await prisma.user.findUnique({ where: { email } })
+        if (existing) throw new Error('Email already in use')
+        data.email = email
       }
 
       if (newPassword) {

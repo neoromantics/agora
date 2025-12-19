@@ -178,7 +178,7 @@ export const typeDefs = /* GraphQL */ `
     deleteComment(commentId: ID!): Boolean!
     likeComment(commentId: ID!): Comment!
     unlikeComment(commentId: ID!): Comment!
-    updateProfile(name: String, bio: String, avatar: String, username: String, currentPassword: String, newPassword: String): User!
+    updateProfile(name: String, bio: String, avatar: String, username: String, email: String, currentPassword: String, newPassword: String): User!
 
     # Notifications
     markNotificationRead(notificationId: ID!): Notification!
