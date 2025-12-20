@@ -25,7 +25,6 @@ export async function generatePhilosopherResponse(
 ): Promise<string> {
   // Check circuit breaker
   if (CircuitBreaker.isOpen()) {
-    console.log(`[LLM] Circuit breaker open - serving fallback for ${philosopher.name}`)
     return FallbackService.getResponse(philosopher.name, userMessage)
   }
 
@@ -40,7 +39,6 @@ export async function generatePhilosopherResponse(
   // Check if LLM is disabled
   const config = useRuntimeConfig()
   if (config.disableLlm) {
-    console.log(`[LLM] Disabled - serving fallback for ${philosopher.name}`)
     return FallbackService.getResponse(philosopher.name, userMessage)
   }
 
@@ -55,8 +53,6 @@ export async function generatePhilosopherResponse(
   const fullPrompt = PromptBuilder.buildSystemPrompt(philosopher, limitedHistory, sanitizedMessage)
 
   try {
-    console.log(`[LLM] Generating response for ${philosopher.name}, history: ${limitedHistory.length} messages`)
-
     const text = await getLLMProvider().generate(fullPrompt, CONFIG.REQUEST_TIMEOUT)
 
     if (!text || text.trim().length === 0) {
@@ -64,7 +60,6 @@ export async function generatePhilosopherResponse(
       return FallbackService.getResponse(philosopher.name, userMessage)
     }
 
-    console.log(`[LLM] Response generated successfully (${text.length} chars)`)
     return text
   } catch (error: unknown) {
     const errorMessage = (error as Error).message || ''

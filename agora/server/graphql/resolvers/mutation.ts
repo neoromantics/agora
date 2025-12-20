@@ -8,6 +8,19 @@ import { generatePhilosopherResponse, generateConversationSummary, generateConve
 import { applyRateLimit, RATE_LIMITS } from '../../utils/rateLimit'
 import { requireAdmin, Role } from '../../utils/rbac'
 import type { Context } from '../context'
+import { deleteImage, parseMinioUrl, isMinioEnabled } from '../../utils/minio'
+
+const cleanupOldAvatar = async (avatarUrl: string | null) => {
+  if (!avatarUrl || !isMinioEnabled()) return
+  const parsed = parseMinioUrl(avatarUrl)
+  if (parsed) {
+    try {
+      await deleteImage(parsed.key)
+    } catch (e) {
+      console.warn('Failed to cleanup old avatar:', e)
+    }
+  }
+}
 
 interface MessageRecord {
   role: string
@@ -671,7 +684,17 @@ export const mutationResolvers = {
 
       if (name) data.name = name
       if (bio !== undefined) data.bio = bio
-      if (avatar !== undefined) data.avatar = avatar // Allow null to remove
+      if (avatar !== undefined) {
+        // Ignore proxy URLs (unchanged)
+        if (avatar && typeof avatar === 'string' && avatar.includes('/api/img/')) {
+          // do nothing, keep existing
+        } else {
+          if (avatar !== user.avatar) {
+            await cleanupOldAvatar(user.avatar)
+          }
+          data.avatar = avatar // Allow null to remove
+        }
+      }
       if (username && username !== user.username) {
         // Check availability
         const existing = await prisma.user.findUnique({ where: { username } })
@@ -758,15 +781,23 @@ export const mutationResolvers = {
     adminDeleteUser: async (_: unknown, { userId }: { userId: string }, context: Context) => {
       await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
+
+      const user = await prisma.user.findUnique({ where: { id: userId } })
+      if (!user) return false
+
+      if (user.avatar) {
+        await cleanupOldAvatar(user.avatar)
+      }
+
       await prisma.user.delete({ where: { id: userId } })
       return true
     },
 
-    adminCreateUser: async (_: unknown, args: { email: string, password: string, name: string, username: string, role?: string }, context: Context) => {
+    adminCreateUser: async (_: unknown, args: { email: string, password: string, name: string, username: string, role?: string, avatar?: string }, context: Context) => {
       await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
 
-      const { email, password, name, username, role = 'USER' } = args
+      const { email, password, name, username, role = 'USER', avatar } = args
 
       // Validate role
       if (!['USER', 'MODERATOR', 'ADMIN'].includes(role)) {
@@ -790,7 +821,8 @@ export const mutationResolvers = {
           passwordHash: hashedPassword,
           name,
           username,
-          role: role as Role
+          role: role as Role,
+          avatar
         }
       })
     },
@@ -799,36 +831,25 @@ export const mutationResolvers = {
       await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
 
-      const { userId, newPassword, role, ...profileData } = args
+      const { userId, ...data } = args
 
-      // Check user exists
       const user = await prisma.user.findUnique({ where: { id: userId } })
-      if (!user) {
-        throw new Error('User not found')
+      if (!user) throw new Error('User not found')
+
+      // Cleanup old avatar if changing
+      if (data.avatar !== undefined) {
+        if (data.avatar && typeof data.avatar === 'string' && data.avatar.includes('/api/img/')) {
+          delete data.avatar
+        } else if (data.avatar !== user.avatar) {
+          if (user.avatar) await cleanupOldAvatar(user.avatar)
+        }
       }
 
-      // Check uniqueness of username/email if changed
-      if (profileData.username && profileData.username !== user.username) {
-        const existing = await prisma.user.findFirst({ where: { username: profileData.username } })
-        if (existing) throw new Error('Username already taken')
-      }
-      if (profileData.email && profileData.email !== user.email) {
-        const existing = await prisma.user.findFirst({ where: { email: profileData.email } })
-        if (existing) throw new Error('Email already in use')
-      }
-
-      // Build update data
-      const updateData: any = {}
-      if (profileData.name) updateData.name = profileData.name
-      if (profileData.username) updateData.username = profileData.username
-      if (profileData.email) updateData.email = profileData.email
-      if (profileData.bio !== undefined) updateData.bio = profileData.bio
-      if (profileData.avatar !== undefined) updateData.avatar = profileData.avatar
-      if (role && ['USER', 'MODERATOR', 'ADMIN'].includes(role)) {
-        updateData.role = role as Role
-      }
-      if (newPassword) {
-        updateData.passwordHash = await hashPassword(newPassword)
+      const updateData: any = { ...data }
+      if (data.role) updateData.role = data.role as Role
+      if (data.newPassword) {
+        updateData.passwordHash = await hashPassword(data.newPassword)
+        delete updateData.newPassword
       }
 
       return prisma.user.update({
@@ -856,6 +877,19 @@ export const mutationResolvers = {
       await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
       const { id, ...data } = args
+
+      // Cleanup old portrait if changing
+      const philosopher = await prisma.philosopher.findUnique({ where: { id } })
+      if (!philosopher) throw new Error('Philosopher not found')
+
+      if (data.portrait !== undefined) {
+        if (data.portrait && typeof data.portrait === 'string' && data.portrait.includes('/api/img/')) {
+          delete data.portrait
+        } else if (data.portrait !== philosopher.portrait) {
+          if (philosopher.portrait) await cleanupOldAvatar(philosopher.portrait)
+        }
+      }
+
       return prisma.philosopher.update({
         where: { id },
         data
@@ -865,6 +899,14 @@ export const mutationResolvers = {
     deletePhilosopher: async (_: unknown, { id }: { id: string }, context: Context) => {
       await applyRateLimit(context.event, RATE_LIMITS.admin, 'admin action')
       await requireAdmin(context.event)
+
+      const philosopher = await prisma.philosopher.findUnique({ where: { id } })
+      if (!philosopher) return false
+
+      if (philosopher.portrait) {
+        await cleanupOldAvatar(philosopher.portrait)
+      }
+
       await prisma.philosopher.delete({ where: { id } })
       return true
     }

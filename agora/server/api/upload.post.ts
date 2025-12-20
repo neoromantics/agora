@@ -59,6 +59,15 @@ export default defineEventHandler(async (event) => {
     const tempId = crypto.randomUUID()
     const key = generateImageKey('avatar', tempId, extension)
 
+    // Fast connectivity check
+    const isHealthy = await import('../utils/minio').then(m => m.checkMinioHealth())
+    if (!isHealthy) {
+      throw createError({
+        statusCode: 503,
+        statusMessage: 'Storage service unavailable'
+      })
+    }
+
     const minioUrl = await uploadImage(file.data, key, contentType)
 
     return {
@@ -66,12 +75,9 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Fallback: Convert to base64 data URL (legacy mode)
-  console.warn('[upload] MinIO not configured, falling back to base64 storage')
-  const base64 = file.data.toString('base64')
-  const dataUrl = `data:${contentType};base64,${base64}`
-
-  return {
-    url: dataUrl
-  }
+  // MinIO is mandatory
+  throw createError({
+    statusCode: 503,
+    statusMessage: 'Storage service (MinIO) is not configured. Local uploads are disabled.'
+  })
 })

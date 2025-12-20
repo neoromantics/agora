@@ -2,6 +2,7 @@
 import { prisma } from '../../utils/db'
 import { getCurrentUser } from '../../utils/auth'
 import type { Context } from '../context'
+import { formatImage, getBaseURL } from '../../utils/format'
 
 export const typeResolvers = {
   Conversation: {
@@ -97,6 +98,18 @@ export const typeResolvers = {
         }
       })
       return count > 0
+    }
+  },
+
+  User: {
+    avatar: (parent: any, _: unknown, context: Context) => {
+      return formatImage(parent.avatar, 'user', parent.id, getBaseURL(context.event))
+    }
+  },
+
+  Philosopher: {
+    portrait: (parent: any, _: unknown, context: Context) => {
+      return formatImage(parent.portrait, 'philosopher', parent.id, getBaseURL(context.event))
     }
   }
 }

@@ -4,37 +4,13 @@ import { getCurrentUser, requireAuth } from '../../utils/auth'
 import { applyRateLimit, RATE_LIMITS } from '../../utils/rateLimit'
 import type { Context } from '../context'
 
-// Format philosopher with simple relative path - IPX baseURL is correctly configured for subpath
-const defaultBaseURL = process.env.NUXT_PUBLIC_BASE_URL || '/agora/beta'
-
-const getBaseURL = (_event: any) => {
-  // Return path-absolute URL (e.g. /agora) to allow IPX to use internal localhost fetch via alias
-  return defaultBaseURL
-}
-
-const formatPhilosopher = (p: any, baseURL: string) => {
-  if (!p) return null
-  return {
-    ...p,
-    era: p.era || 'Unknown Era',
-    portrait: p.portrait ? `${baseURL}/api/img/philosopher/${p.id}` : '',
-    conversationCount: p._count?.conversations || 0
-  }
-}
-
-const formatUser = (u: any, baseURL: string) => {
-  if (!u) return null
-  return {
-    ...u,
-    avatar: u.avatar ? `${baseURL}/api/img/user/${u.id}` : '',
-    conversationCount: u._count?.conversations || 0
-  }
-}
+import { formatUser, formatPhilosopher, getBaseURL } from '../../utils/format'
 
 export const queryResolvers = {
   Query: {
     me: async (_: unknown, __: unknown, context: Context) => {
-      return getCurrentUser(context.event)
+      const user = await getCurrentUser(context.event)
+      return formatUser(user, getBaseURL(context.event))
     },
 
     philosophers: async (_: unknown, { era, search }: { era?: string, search?: string }, context: Context) => {
@@ -301,11 +277,7 @@ export const queryResolvers = {
       })
 
       const baseURL = getBaseURL(context.event)
-      return users.map(u => ({
-        ...u,
-        avatar: u.avatar ? `${baseURL}/api/img/user/${u.id}` : '',
-        conversationCount: u._count.conversations
-      }))
+      return users.map(u => formatUser(u, baseURL))
     },
 
     adminConversations: async (_: unknown, { limit = 50, search }: { limit?: number, search?: string }, context: Context) => {

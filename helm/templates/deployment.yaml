@@ -80,7 +80,7 @@ spec:
                   name: {{ .Values.secrets.existingSecret }}
                   key: minio-root-password
             - name: NUXT_MINIO_BUCKET
-              value: "agora"
+              value: {{ .Values.minio.bucket | default "agora" | quote }}
             - name: NUXT_MINIO_USE_SSL
               value: "false"
             {{- end }}

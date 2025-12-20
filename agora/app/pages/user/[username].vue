@@ -156,22 +156,12 @@ function onFork(conversation: Conversation) {
       <div class="bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800">
         <UContainer class="py-12">
           <div class="flex flex-col md:flex-row items-center md:items-start gap-8">
-            <img
-              v-if="user.avatar"
-              :src="user.avatar"
+            <UAvatar
+              :src="user.avatar || undefined"
               :alt="user.name"
-              loading="eager"
-              class="w-32 h-32 rounded-full object-cover ring-4 ring-white dark:ring-stone-900 shadow-sm"
-            >
-            <span
-              v-else
-              class="w-32 h-32 rounded-full bg-stone-200 dark:bg-stone-800 ring-4 ring-white dark:ring-stone-900 shadow-sm flex items-center justify-center text-4xl text-stone-500"
-            >
-              <UIcon
-                name="i-lucide-user"
-                class="w-12 h-12"
-              />
-            </span>
+              size="3xl"
+              class="w-32 h-32 text-4xl ring-4 ring-white dark:ring-stone-900 shadow-sm"
+            />
 
             <div class="flex-1 text-center md:text-left">
               <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-1">

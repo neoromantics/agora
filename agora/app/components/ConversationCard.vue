@@ -142,14 +142,11 @@ const displayUserName = computed(() => {
               class="flex-shrink-0 hover:opacity-80 transition-opacity"
               @click.stop
             >
-              <NuxtImg
+              <UAvatar
                 :src="conversation.philosopher.portrait"
                 :alt="conversation.philosopher.name"
-                width="32"
-                height="32"
-                fit="cover"
-                :loading="preloadImage ? 'eager' : 'lazy'"
-                class="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-stone-900"
+                size="sm"
+                class="ring-2 ring-white dark:ring-stone-900"
               />
             </NuxtLink>
 
@@ -160,25 +157,12 @@ const displayUserName = computed(() => {
               class="relative z-0 hover:z-20 hover:scale-105 transition-all outline-none"
               @click.stop
             >
-              <NuxtImg
-                v-if="conversation.user.avatar"
-                :src="conversation.user.avatar"
+              <UAvatar
+                :src="conversation.user.avatar || undefined"
                 :alt="conversation.user.name"
-                width="32"
-                height="32"
-                fit="cover"
-                :loading="preloadImage ? 'eager' : 'lazy'"
-                class="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-stone-900 cursor-pointer"
+                size="sm"
+                class="ring-2 ring-white dark:ring-stone-900 cursor-pointer"
               />
-              <span
-                v-else
-                class="w-8 h-8 rounded-full bg-stone-200 dark:bg-stone-800 ring-2 ring-white dark:ring-stone-900 flex items-center justify-center text-stone-500"
-              >
-                <UIcon
-                  name="i-lucide-user"
-                  class="w-4 h-4"
-                />
-              </span>
             </NuxtLink>
             <span
               v-else

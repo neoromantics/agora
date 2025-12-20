@@ -14,6 +14,8 @@ onMounted(() => {
   initialize()
 })
 
+const avatarInput = ref<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
+
 // Redirect if not logged in
 watch(token, (newToken) => {
   if (!newToken) {
@@ -44,15 +46,9 @@ watch(user, (newUser) => {
   }
 }, { immediate: true })
 
-const fileInput = ref<HTMLInputElement | null>(null)
 const isSaving = ref(false)
 const showPasswordSection = ref(false)
 const showPasswords = ref(false)
-
-// Use standardized upload composable
-const { isUploading, handleFileChange } = useImageUpload({
-  onSuccess: (url: string) => { state.avatar = url }
-})
 
 // Schema for validation
 const schema = z.object({
@@ -91,6 +87,12 @@ function getAuthHeaders(): Record<string, string> {
 async function onSubmit() {
   isSaving.value = true
   try {
+    // Handle deferred upload
+    const finalAvatar = await avatarInput.value?.upload()
+    if (finalAvatar !== null) {
+      state.avatar = finalAvatar
+    }
+
     const variables: Record<string, string | null | undefined> = {
       name: state.name,
       bio: state.bio,
@@ -143,10 +145,6 @@ async function onSubmit() {
     isSaving.value = false
   }
 }
-
-function triggerFileInput() {
-  fileInput.value?.click()
-}
 </script>
 
 <template>
@@ -179,46 +177,16 @@ function triggerFileInput() {
           @submit="onSubmit"
         >
           <!-- Avatar Section -->
-          <div class="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-stone-200 dark:border-stone-700">
-            <div class="relative">
-              <UAvatar
-                :src="state.avatar || undefined"
-                :alt="state.name"
-                size="3xl"
-                class="ring-4 ring-stone-200 dark:ring-stone-700"
-              />
-              <div
-                v-if="isUploading"
-                class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full"
-              >
-                <UIcon
-                  name="i-lucide-loader-2"
-                  class="w-8 h-8 text-white animate-spin"
-                />
-              </div>
-            </div>
-            <div class="text-center sm:text-left">
-              <input
-                ref="fileInput"
-                type="file"
-                accept="image/*"
-                class="hidden"
-                @change="handleFileChange"
-              >
-              <UButton
-                color="neutral"
-                variant="soft"
-                icon="i-lucide-camera"
-                :loading="isUploading"
-                @click="triggerFileInput"
-              >
-                Change photo
-              </UButton>
-              <p class="text-xs text-stone-400 mt-2">
-                JPG, PNG or GIF. Max 500KB.
-              </p>
-            </div>
-          </div>
+          <ImageInput
+            ref="avatarInput"
+            v-model="state.avatar"
+            label="Profile Photo"
+            aspect="avatar"
+            :alt="state.name"
+            :allow-url="true"
+            :defer="true"
+            help="JPG, PNG or GIF. Max 5MB."
+          />
 
           <!-- Basic Info -->
           <div class="space-y-6">

@@ -33,7 +33,6 @@ function getClient(): GenerativeModel {
       ]
     })
     currentModel = modelName
-    console.log(`[LLM] Initialized Gemini provider with model: ${modelName}`)
   }
   return model
 }

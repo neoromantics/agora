@@ -13,10 +13,11 @@ const toast = useToast()
 interface AdminUser {
   id: string
   name: string
+
   username: string
   email: string
+  avatar: string | null
   role: 'USER' | 'ADMIN' | 'MODERATOR'
-  avatar: string
   bio?: string
   createdAt: string
   conversationCount: number
@@ -156,17 +157,12 @@ async function executeDelete() {
   }
 }
 
-// --- Create/Edit User ---
 const isEditModalOpen = ref(false)
 const isCreating = ref(false)
 const isSavingUser = ref(false)
-const fileInput = ref<HTMLInputElement | null>(null)
 const editingUser = ref<AdminUser | null>(null)
+const avatarInput = ref<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
 
-// Use standardized upload composable
-const { isUploading, handleFileChange } = useImageUpload({
-  onSuccess: (url: string) => { userForm.avatar = url }
-})
 const userForm = reactive({
   name: '',
   username: '',
@@ -206,6 +202,12 @@ function openEditModal(user: AdminUser) {
 async function saveUser() {
   isSavingUser.value = true
   try {
+    // Deferred upload
+    const finalAvatar = await avatarInput.value?.upload()
+    if (finalAvatar !== null) {
+      userForm.avatar = finalAvatar
+    }
+
     if (isCreating.value) {
       // Create new user
       if (!userForm.password) {
@@ -216,8 +218,8 @@ async function saveUser() {
         headers: { Authorization: `Bearer ${token.value}` },
         body: {
           query: `
-            mutation AdminCreateUser($email: String!, $password: String!, $name: String!, $username: String!, $role: String) {
-              adminCreateUser(email: $email, password: $password, name: $name, username: $username, role: $role) {
+            mutation AdminCreateUser($email: String!, $password: String!, $name: String!, $username: String!, $role: String, $avatar: String) {
+              adminCreateUser(email: $email, password: $password, name: $name, username: $username, role: $role, avatar: $avatar) {
                 id
               }
             }
@@ -227,7 +229,8 @@ async function saveUser() {
             password: userForm.password,
             name: userForm.name,
             username: userForm.username,
-            role: userForm.role
+            role: userForm.role,
+            avatar: userForm.avatar
           }
         }
       })
@@ -274,9 +277,6 @@ async function saveUser() {
   }
 }
 
-function triggerFileInput() {
-  fileInput.value?.click()
-}
 // Hydration-safe date formatter
 const formatJoinDate = useHydrationSafeFormatter((dateStr: string) =>
   format(new Date(dateStr), 'MMM d, yyyy')
@@ -328,24 +328,12 @@ const formatJoinDate = useHydrationSafeFormatter((dateStr: string) =>
             :to="`/user/${user.username}`"
             class="hover:scale-110 transition-transform"
           >
-            <NuxtImg
-              v-if="user.avatar"
-              :src="user.avatar"
+            <UAvatar
+              :src="user.avatar || undefined"
               :alt="user.name"
-              width="40"
-              height="40"
-              fit="cover"
-              class="w-10 h-10 rounded-full object-cover ring-1 ring-stone-200 dark:ring-stone-700 cursor-pointer"
+              size="md"
+              class="ring-1 ring-stone-200 dark:ring-stone-700 cursor-pointer"
             />
-            <span
-              v-else
-              class="w-10 h-10 rounded-full bg-stone-200 dark:bg-stone-800 ring-1 ring-stone-200 dark:ring-stone-700 flex items-center justify-center"
-            >
-              <UIcon
-                name="i-lucide-user"
-                class="w-5 h-5 text-stone-500"
-              />
-            </span>
           </NuxtLink>
           <div class="min-w-0 flex-1">
             <h3 class="font-medium text-stone-900 dark:text-stone-100 truncate">
@@ -546,51 +534,18 @@ const formatJoinDate = useHydrationSafeFormatter((dateStr: string) =>
           <div class="p-4 space-y-4">
             <!-- Avatar Preview -->
             <div class="flex items-center gap-4 pb-4 border-b border-stone-200 dark:border-stone-700">
-              <div class="relative">
-                <UAvatar
-                  :src="userForm.avatar || undefined"
-                  :alt="userForm.name"
-                  size="xl"
-                />
-                <div
-                  v-if="isUploading"
-                  class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full"
-                >
-                  <UIcon
-                    name="i-lucide-loader-2"
-                    class="w-6 h-6 text-white animate-spin"
-                  />
-                </div>
-              </div>
               <div class="flex-1">
-                <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
+                <ImageInput
+                  ref="avatarInput"
+                  v-model="userForm.avatar"
+                  aspect="avatar"
+                  :alt="userForm.name"
+                  :allow-url="true"
+                  :defer="true"
+                />
+                <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1 mt-2">
                   Avatar
                 </label>
-                <div class="flex gap-2">
-                  <UInput
-                    v-model="userForm.avatar"
-                    placeholder="https://..."
-                    size="sm"
-                    class="flex-1"
-                  />
-                  <input
-                    ref="fileInput"
-                    type="file"
-                    accept="image/*"
-                    class="hidden"
-                    @change="handleFileChange"
-                  >
-                  <UTooltip text="Upload photo (max 5MB)">
-                    <UButton
-                      color="neutral"
-                      variant="soft"
-                      icon="i-lucide-camera"
-                      size="sm"
-                      :loading="isUploading"
-                      @click="triggerFileInput"
-                    />
-                  </UTooltip>
-                </div>
               </div>
             </div>
 

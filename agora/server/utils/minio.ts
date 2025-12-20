@@ -102,24 +102,6 @@ export async function getImageStream(key: string): Promise<{ stream: NodeJS.Read
 }
 
 /**
- * Get an image from MinIO (Buffered)
- * @deprecated Use getImageStream for better performance
- * @returns Buffer and content type
- */
-export async function getImage(key: string): Promise<{ buffer: Buffer, contentType: string }> {
-  // ... existing implementation
-  const result = await getImageStream(key)
-  const chunks: Buffer[] = []
-  for await (const chunk of result.stream) {
-    chunks.push(Buffer.from(chunk))
-  }
-  return {
-    buffer: Buffer.concat(chunks),
-    contentType: result.contentType
-  }
-}
-
-/**
  * Delete an image from MinIO
  */
 export async function deleteImage(key: string): Promise<void> {
@@ -135,4 +117,19 @@ export function parseMinioUrl(url: string): { bucket: string, key: string } | nu
   const match = url.match(/^minio:\/\/([^/]+)\/(.+)$/)
   if (!match || !match[1] || !match[2]) return null
   return { bucket: match[1], key: match[2] }
+}
+
+/**
+ * Check MinIO connectivity
+ */
+export async function checkMinioHealth(): Promise<boolean> {
+  try {
+    const client = getMinioClient()
+    const bucket = getMinioBucket()
+    await client.bucketExists(bucket)
+    return true
+  } catch (err) {
+    console.error('MinIO Health Check Failed:', err)
+    return false
+  }
 }

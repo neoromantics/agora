@@ -8,7 +8,7 @@ Welcome to the Agora project! This guide covers everything from setting up your 
 
 ### Prerequisites
 - **Node.js** (v18+ recommended)
-- **Docker** & **Docker Compose**
+- **K3s** (or accessing a remote cluster)
 - **Git**
 
 ### Step-by-Step Setup
@@ -38,12 +38,8 @@ Welcome to the Agora project! This guide covers everything from setting up your 
     # DISABLE_LLM=true (To skip LLM requirement)
     ```
 
-3.  **Start Infrastructure**
-    Start the local database and Redis containers:
-    ```bash
-    # From project root
-    docker compose up -d postgres redis
-    ```
+    Ensure your Kubernetes cluster is running and accessible.
+    If you need to connect to services, use `kubectl port-forward` or configure your `.env` to point to the cluster services.
 
 4.  **Initialize Database**
     Run migrations and seed the database:
@@ -307,7 +303,7 @@ To overwrite Staging data with a snapshot of Production:
 | [agora/nuxt.config.ts](file:///home/tl370/agora/agora/nuxt.config.ts) | Main App Config |
 | [agora/server/plugins/config.ts](file:///home/tl370/agora/agora/server/plugins/config.ts) | Startup Validation |
 | [helm/templates/deployment.yaml](file:///home/tl370/agora/helm/templates/deployment.yaml) | K8s Deployment Manifest |
-| [docker-compose.yaml](file:///home/tl370/agora/docker-compose.yaml) | Local DB/Redis setup |
+
 
 ---
 

@@ -59,17 +59,13 @@ export default defineNitroPlugin((nitroApp) => {
       if (httpServer) {
         io.attach(httpServer)
         httpServer.io = io
-        console.log('Socket.IO attached to server')
       }
     }
   })
 
   io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id)
-
     socket.on('join-conversation', (conversationId) => {
       socket.join(`conversation:${conversationId}`)
-      console.log(`Socket ${socket.id} joined conversation:${conversationId}`)
     })
 
     socket.on('leave-conversation', (conversationId) => {
@@ -77,7 +73,7 @@ export default defineNitroPlugin((nitroApp) => {
     })
 
     socket.on('disconnect', () => {
-      console.log('Client disconnected:', socket.id)
+
     })
   })
 

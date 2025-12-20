@@ -195,21 +195,12 @@ const formatDate = useHydrationSafeFormatter((dateStr: string) =>
               :to="`/user/${conv.user.username}`"
               class="hover:z-10 transition-transform hover:scale-110"
             >
-              <img
-                v-if="conv.user.avatar"
-                :src="conv.user.avatar"
+              <UAvatar
+                :src="conv.user.avatar || undefined"
                 :alt="conv.user.name"
-                class="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-stone-900 cursor-pointer"
-              >
-              <span
-                v-else
-                class="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 ring-2 ring-white dark:ring-stone-900 flex items-center justify-center"
-              >
-                <UIcon
-                  name="i-lucide-user"
-                  class="w-4 h-4 text-stone-500"
-                />
-              </span>
+                size="sm"
+                class="ring-2 ring-white dark:ring-stone-900 cursor-pointer"
+              />
             </NuxtLink>
             <span
               v-else
@@ -221,11 +212,12 @@ const formatDate = useHydrationSafeFormatter((dateStr: string) =>
               />
             </span>
 
-            <img
+            <UAvatar
               :src="conv.philosopher.portrait"
               :alt="conv.philosopher.name"
-              class="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-stone-900"
-            >
+              size="sm"
+              class="ring-2 ring-white dark:ring-stone-900"
+            />
           </div>
           <div class="text-xs text-stone-500 flex flex-wrap items-center gap-1 min-w-0">
             <span

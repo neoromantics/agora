@@ -13,7 +13,6 @@ export const getRedisClient = () => {
     return null
   }
 
-  console.log('[Redis] Initializing shared Redis client...')
   redisClient = new Redis(redisUrl as string, {
     maxRetriesPerRequest: 3,
     retryStrategy(times) {
@@ -27,7 +26,7 @@ export const getRedisClient = () => {
   })
 
   redisClient.on('connect', () => {
-    console.log('[Redis] Connected successfully')
+
   })
 
   return redisClient

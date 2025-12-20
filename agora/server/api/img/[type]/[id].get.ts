@@ -1,6 +1,6 @@
 import { ImageService } from '../../../services/ImageService'
 
-export default defineCachedEventHandler(async (event) => {
+export default defineEventHandler(async (event) => {
   const type = getRouterParam(event, 'type')
   const id = getRouterParam(event, 'id')
 
@@ -17,10 +17,11 @@ export default defineCachedEventHandler(async (event) => {
       setHeader(event, 'Content-Type', mimeType)
     }
 
-    // Set Aggressive Cache Headers (Immutable / 1 Year)
-    // The server-side cache (SWR) handles the "execution" cache,
-    // this header handles the "Browser" cache.
-    setHeader(event, 'Cache-Control', 'public, max-age=31536000, immutable')
+    // Set Cache-Control Headers
+    // User requested NO browser caching to ensure updates are seen immediately
+    setHeader(event, 'Cache-Control', 'no-cache, no-store, must-revalidate')
+    setHeader(event, 'Pragma', 'no-cache')
+    setHeader(event, 'Expires', '0')
 
     return sendStream(event, stream)
   } catch (error: unknown) {
@@ -37,11 +38,7 @@ export default defineCachedEventHandler(async (event) => {
     }
 
     // Default 500
-    // console.error('Image Service Error:', error)
+    console.error('Image Service Error:', error)
     throw createError({ statusCode: 500, message: 'Internal Server Error fetching image' })
   }
-}, {
-  swr: true,
-  maxAge: 60 * 60 * 24, // Server-Side Cache: 24 Hours
-  name: 'image-proxy'
 })

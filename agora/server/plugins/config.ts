@@ -35,7 +35,5 @@ export default defineNitroPlugin(() => {
     } else {
       console.warn('⚠️  Dev Mode: Proceeding despite configuration errors (some features may break)')
     }
-  } else {
-    console.log('✅ Configuration validated successfully')
   }
 })

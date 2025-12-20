@@ -197,19 +197,11 @@ function handleNestedDelete(commentId: string) {
       :to="`/user/${comment.user.username}`"
       class="flex-shrink-0"
     >
-      <NuxtImg
-        v-if="comment.user.avatar"
-        :src="comment.user.avatar"
-        :alt="comment.user.name"
-        width="32"
-        height="32"
-        fit="cover"
-        class="w-8 h-8 rounded-full object-cover ring-1 ring-stone-200 dark:ring-stone-700"
-      />
       <UAvatar
-        v-else
+        :src="comment.user.avatar || undefined"
         :alt="comment.user.name"
         size="sm"
+        class="ring-1 ring-stone-200 dark:ring-stone-700"
       />
     </NuxtLink>
 

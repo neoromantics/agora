@@ -57,20 +57,6 @@ export default defineNuxtConfig({
     }
   },
 
-  routeRules: {
-    // Prerendering requires DB access, which we don't have during Docker build
-    // '/': { prerender: true },
-    // '/gallery': { prerender: true },
-    // '/api/**': { cors: true },
-    '/admin/**': {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    }
-  },
-
   compatibilityDate: '2025-01-15',
 
   eslint: {
@@ -80,30 +66,6 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
-  },
-
-  // Nuxt Image - configure IPX with correct baseURL for subpath deployment
-  image: {
-    provider: 'ipx',
-    ipx: {
-      // @ts-expect-error IPX options including alias are passed through at runtime
-      alias: {
-        // Map relative paths (e.g. /agora/api/img) to localhost to bypass external loopback latency
-        [`${process.env.NUXT_PUBLIC_BASE_URL || '/agora/beta'}/api/img`]: `http://localhost:3000${process.env.NUXT_PUBLIC_BASE_URL || '/agora/beta'}/api/img`
-      }
-    },
-    // Configure domains for IPX
-    domains: [
-      'localhost',
-      '127.0.0.1',
-      'vcm-51278.vm.duke.edu',
-      'upload.wikimedia.org',
-      'commons.wikimedia.org',
-      'i.imgur.com',
-      'lh3.googleusercontent.com',
-      'secure.gravatar.com',
-      'server.gravatar.com',
-      'pbs.twimg.com'
-    ]
   }
+
 })

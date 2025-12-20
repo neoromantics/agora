@@ -157,15 +157,14 @@ definePageMeta({
           >
             <!-- Optimized Image with Eager Loading for LCP -->
             <div class="relative w-20 h-20 rounded-full overflow-hidden bg-stone-100 dark:bg-stone-800 ring-1 ring-stone-200 dark:ring-stone-700 shadow-sm">
-              <NuxtImg
+              <img
                 :src="philosopher.portrait"
                 :alt="philosopher.name"
                 class="w-full h-full object-cover sepia-[0.15]"
                 width="80"
                 height="80"
-                fit="cover"
                 loading="eager"
-              />
+              >
             </div>
 
             <div class="space-y-3">

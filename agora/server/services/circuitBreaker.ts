@@ -22,7 +22,6 @@ export const CircuitBreaker = {
     if (state.isOpen) {
       state.isOpen = false
       state.failureCount = 0
-      console.log('[LLM] Circuit breaker reset')
     }
     return false
   },

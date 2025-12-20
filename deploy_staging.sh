@@ -29,6 +29,8 @@ kubectl create secret generic agora-secrets \
   --from-literal=gemini-api-key="$NUXT_GEMINI_API_KEY" \
   --from-literal=postgres-password="$POSTGRES_PASSWORD" \
   --from-literal=redis-password="$REDIS_PASSWORD" \
+  --from-literal=minio-root-user="$MINIO_ROOT_USER" \
+  --from-literal=minio-root-password="$MINIO_ROOT_PASSWORD" \
   -n agora-staging --dry-run=client -o yaml | kubectl apply -f -
 
 echo "Installing/Upgrading Helm release..."

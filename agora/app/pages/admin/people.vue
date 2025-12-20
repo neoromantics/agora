@@ -72,7 +72,7 @@ const schema = z.object({
   era: z.string().min(1, 'Era is required'),
   years: z.string().min(1, 'Years are required'),
   nationality: z.string().min(1, 'Nationality is required'),
-  portrait: z.string().url('Must be a valid URL'),
+  portrait: z.union([z.string().url(), z.literal('')]),
   biography: z.string().min(10, 'Biography must be at least 10 characters'),
   systemPrompt: z.string().min(10, 'System prompt must be at least 10 characters'),
   topics: z.string(),
@@ -139,9 +139,14 @@ function openEdit(phil: any) {
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   loading.value = true
-  const data = event.data
-
+  // Trigger deferred upload
   try {
+    // Portrait is optional (can be empty string)
+    const finalPortrait = await portraitInput.value?.upload() || ''
+
+    // Override form data with the uploaded URL
+    const data = { ...event.data, portrait: finalPortrait }
+
     const input = {
       name: data.name,
       slug: data.slug,
@@ -188,6 +193,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     isModalOpen.value = false
     refresh()
   } catch (e: unknown) {
+    console.error('Submit error:', e)
     const message = e instanceof Error ? e.message : 'Unknown error'
     toast.add({ title: 'Failed to save', description: message, color: 'error' })
   } finally {
@@ -197,6 +203,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
 const showDeleteModal = ref(false)
 const selectedPhilId = ref('')
+const portraitInput = ref<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
 
 function confirmDelete(id: string) {
   selectedPhilId.value = id
@@ -269,14 +276,13 @@ async function executeDelete() {
       >
         <!-- Image & Actions -->
         <div class="aspect-[4/5] relative overflow-hidden bg-stone-100 dark:bg-stone-800">
-          <NuxtImg
+          <img
             :src="phil.portrait"
             :alt="phil.name"
             width="300"
             height="375"
-            fit="cover"
             class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-          />
+          >
           <!-- Delete Action (Overlay) -->
           <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <UButton
@@ -389,24 +395,19 @@ async function executeDelete() {
                   </UInput>
                 </UFormField>
                 <UFormField
-                  label="Portrait URL"
+                  label="Portrait"
                   name="portrait"
                   class="md:col-span-2"
                 >
-                  <div class="flex gap-4 items-start">
-                    <UAvatar
-                      :src="formState.portrait"
-                      :alt="formState.name"
-                      size="xl"
-                      class="ring-1 ring-stone-200 dark:ring-stone-800"
-                    />
-                    <UInput
-                      v-model="formState.portrait"
-                      placeholder="https://..."
-                      icon="i-lucide-image"
-                      class="flex-1"
-                    />
-                  </div>
+                  <ImageInput
+                    ref="portraitInput"
+                    v-model="formState.portrait"
+                    :alt="formState.name"
+                    aspect="portrait"
+                    :allow-url="true"
+                    :defer="true"
+                    help="Upload a photo or provide an external URL."
+                  />
                 </UFormField>
               </div>
             </div>
