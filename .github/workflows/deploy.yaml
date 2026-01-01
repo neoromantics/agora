@@ -38,6 +38,13 @@ jobs:
           chmod 600 $HOME/.kube/config
 
       - name: Deploy to K3s
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
         run: |
           # 1. Resolve Tag from Upstream CI (Full SHA)
           HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
@@ -69,11 +76,26 @@ jobs:
           echo "Ingress Host: $INGRESS_HOST"
           echo "Path Prefix: $PATH_PREFIX"
 
-          # 3. Build Dependencies
+          # 3. Create/Update Secrets
+          DATABASE_URL="postgresql://agora:${POSTGRES_PASSWORD}@agora-postgresql:5432/agora"
+          REDIS_URL="redis://:${REDIS_PASSWORD}@agora-redis-master:6379/0"
+          
+          kubectl create secret generic agora-secrets \
+            --from-literal=database-url="$DATABASE_URL" \
+            --from-literal=redis-url="$REDIS_URL" \
+            --from-literal=jwt-secret="$JWT_SECRET" \
+            --from-literal=gemini-api-key="$GEMINI_API_KEY" \
+            --from-literal=postgres-password="$POSTGRES_PASSWORD" \
+            --from-literal=redis-password="$REDIS_PASSWORD" \
+            --from-literal=minio-root-user="$MINIO_ROOT_USER" \
+            --from-literal=minio-root-password="$MINIO_ROOT_PASSWORD" \
+            -n $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+
+          # 4. Build Dependencies
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm dependency build ./helm
 
-          # 4. Helm Upgrade
+          # 5. Helm Upgrade
           helm upgrade --install agora ./helm \
             --namespace $NAMESPACE \
             --create-namespace \
