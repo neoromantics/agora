@@ -197,8 +197,18 @@ function handleNestedDelete(commentId: string) {
       :to="`/user/${comment.user.username}`"
       class="flex-shrink-0"
     >
+      <div
+        v-if="comment.user.avatar"
+        class="h-8 w-8 rounded-full overflow-hidden ring-1 ring-stone-200 dark:ring-stone-700"
+      >
+        <img
+          :src="comment.user.avatar"
+          :alt="comment.user.name"
+          class="h-full w-full object-cover"
+        >
+      </div>
       <UAvatar
-        :src="comment.user.avatar || undefined"
+        v-else
         :alt="comment.user.name"
         size="sm"
         class="ring-1 ring-stone-200 dark:ring-stone-700"

@@ -170,9 +170,18 @@ watch(() => props.conversationId, (newId) => {
         class="flex gap-3"
         @submit.prevent="submitComment"
       >
+        <div
+          v-if="user?.avatar"
+          class="w-8 h-8 rounded-full overflow-hidden ring-1 ring-stone-200 dark:ring-stone-700 flex-shrink-0"
+        >
+          <img
+            :src="user.avatar"
+            :alt="user.name"
+            class="w-full h-full object-cover"
+          >
+        </div>
         <UAvatar
-          v-if="user"
-          :src="user.avatar || undefined"
+          v-else-if="user"
           :alt="user.name"
           size="sm"
           class="flex-shrink-0"

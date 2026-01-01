@@ -62,8 +62,19 @@ const userMenuItems = computed(() => [
                 color="neutral"
                 trailing-icon="i-lucide-chevron-down"
               >
+                <div
+                  v-if="user?.avatar"
+                  class="relative h-6 w-6 rounded-full overflow-hidden ring-1 ring-stone-200 dark:ring-stone-700"
+                >
+                  <img
+                    :src="user.avatar"
+                    :alt="user.name"
+                    class="h-full w-full object-cover"
+                  >
+                </div>
                 <UAvatar
-                  :src="user?.avatar || undefined"
+                  v-else
+                  :src="undefined"
                   :alt="user?.name"
                   size="xs"
                 />

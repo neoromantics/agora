@@ -156,8 +156,18 @@ function onFork(conversation: Conversation) {
       <div class="bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800">
         <UContainer class="py-12">
           <div class="flex flex-col md:flex-row items-center md:items-start gap-8">
+            <div
+              v-if="user.avatar"
+              class="w-32 h-32 rounded-full overflow-hidden ring-4 ring-white dark:ring-stone-900 shadow-sm"
+            >
+              <img
+                :src="user.avatar"
+                :alt="user.name"
+                class="w-full h-full object-cover"
+              >
+            </div>
             <UAvatar
-              :src="user.avatar || undefined"
+              v-else
               :alt="user.name"
               size="3xl"
               class="w-32 h-32 text-4xl ring-4 ring-white dark:ring-stone-900 shadow-sm"

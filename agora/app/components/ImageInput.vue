@@ -62,7 +62,9 @@ async function upload(): Promise<string | null> {
 }
 
 defineExpose({
-  upload
+  upload,
+  reset: clear,
+  resetPending
 })
 
 // Validation for URL
@@ -111,6 +113,14 @@ function clear() {
   emit('update:modelValue', '')
   manualUrl.value = ''
   urlError.value = ''
+}
+
+function resetPending() {
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+  pendingFile.value = null
 }
 
 function triggerUpload() {
@@ -172,18 +182,8 @@ onUnmounted(() => {
       >
         <!-- Current Image -->
         <template v-if="modelValue || previewUrl">
-          <!-- Avatar Mode -->
-          <UAvatar
-            v-if="aspect === 'avatar'"
-            :src="previewUrl || modelValue || undefined"
-            :alt="alt"
-            size="3xl"
-            class="w-full h-full text-xl"
-            :ui="{ root: 'rounded-none' }"
-          />
-          <!-- Standard Image Mode -->
+          <!-- Standardized Image -->
           <img
-            v-else
             :src="previewUrl || modelValue || undefined"
             :alt="alt"
             class="w-full h-full object-cover"

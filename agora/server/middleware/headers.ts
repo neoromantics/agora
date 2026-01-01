@@ -23,5 +23,5 @@ export default defineEventHandler((event) => {
   const isDev = process.env.NODE_ENV === 'development'
   const scriptSrc = isDev ? '\'self\' \'unsafe-inline\' \'unsafe-eval\'' : '\'self\' \'unsafe-inline\''
 
-  setHeader(event, 'Content-Security-Policy', `default-src 'self'; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: wss:;`)
+  setHeader(event, 'Content-Security-Policy', `default-src 'self'; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:;`)
 })

@@ -98,11 +98,21 @@ async function handleFork() {
     <div class="space-y-6 py-2 text-left">
       <!-- What you're forking -->
       <div class="flex items-center gap-4 bg-stone-50 dark:bg-stone-900/50 p-4 rounded-lg border border-stone-100 dark:border-stone-800">
+        <div
+          v-if="conversation.philosopher.portrait"
+          class="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white dark:ring-stone-900 shadow-sm flex-shrink-0"
+        >
+          <img
+            :src="conversation.philosopher.portrait"
+            :alt="conversation.philosopher.name"
+            class="w-full h-full object-cover"
+          >
+        </div>
         <UAvatar
-          :src="conversation.philosopher.portrait"
+          v-else
           :alt="conversation.philosopher.name"
           size="lg"
-          class="ring-2 ring-white dark:ring-stone-900 shadow-sm"
+          class="ring-2 ring-white dark:ring-stone-900 shadow-sm flex-shrink-0"
         />
         <div class="min-w-0">
           <p class="font-serif font-semibold text-stone-900 dark:text-stone-100 truncate">

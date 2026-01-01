@@ -195,8 +195,18 @@ const formatDate = useHydrationSafeFormatter((dateStr: string) =>
               :to="`/user/${conv.user.username}`"
               class="hover:z-10 transition-transform hover:scale-110"
             >
+              <div
+                v-if="conv.user.avatar"
+                class="w-8 h-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-stone-900 cursor-pointer"
+              >
+                <img
+                  :src="conv.user.avatar"
+                  :alt="conv.user.name"
+                  class="w-full h-full object-cover"
+                >
+              </div>
               <UAvatar
-                :src="conv.user.avatar || undefined"
+                v-else
                 :alt="conv.user.name"
                 size="sm"
                 class="ring-2 ring-white dark:ring-stone-900 cursor-pointer"
@@ -212,8 +222,18 @@ const formatDate = useHydrationSafeFormatter((dateStr: string) =>
               />
             </span>
 
+            <div
+              v-if="conv.philosopher.portrait"
+              class="w-8 h-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-stone-900"
+            >
+              <img
+                :src="conv.philosopher.portrait"
+                :alt="conv.philosopher.name"
+                class="w-full h-full object-cover"
+              >
+            </div>
             <UAvatar
-              :src="conv.philosopher.portrait"
+              v-else
               :alt="conv.philosopher.name"
               size="sm"
               class="ring-2 ring-white dark:ring-stone-900"

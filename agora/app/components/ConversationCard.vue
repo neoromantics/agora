@@ -142,8 +142,18 @@ const displayUserName = computed(() => {
               class="flex-shrink-0 hover:opacity-80 transition-opacity"
               @click.stop
             >
+              <div
+                v-if="conversation.philosopher.portrait"
+                class="w-8 h-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-stone-900 bg-stone-100 dark:bg-stone-800"
+              >
+                <img
+                  :src="conversation.philosopher.portrait"
+                  :alt="conversation.philosopher.name"
+                  class="w-full h-full object-cover"
+                >
+              </div>
               <UAvatar
-                :src="conversation.philosopher.portrait"
+                v-else
                 :alt="conversation.philosopher.name"
                 size="sm"
                 class="ring-2 ring-white dark:ring-stone-900"
@@ -157,8 +167,18 @@ const displayUserName = computed(() => {
               class="relative z-0 hover:z-20 hover:scale-105 transition-all outline-none"
               @click.stop
             >
+              <div
+                v-if="conversation.user.avatar"
+                class="w-8 h-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-stone-900 cursor-pointer"
+              >
+                <img
+                  :src="conversation.user.avatar"
+                  :alt="conversation.user.name"
+                  class="w-full h-full object-cover"
+                >
+              </div>
               <UAvatar
-                :src="conversation.user.avatar || undefined"
+                v-else
                 :alt="conversation.user.name"
                 size="sm"
                 class="ring-2 ring-white dark:ring-stone-900 cursor-pointer"

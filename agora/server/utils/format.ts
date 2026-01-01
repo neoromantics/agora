@@ -1,8 +1,9 @@
 // Basic URL formatting for images
-export const defaultBaseURL = process.env.NUXT_PUBLIC_BASE_URL || '/agora'
+export const defaultBaseURL = '/agora'
 
-export const getBaseURL = (_event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-  return defaultBaseURL
+export const getBaseURL = (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const config = useRuntimeConfig(event)
+  return config.public.baseUrl || defaultBaseURL
 }
 
 export const formatImage = (rawUrl: string, type: string, id: string, baseURL: string) => {

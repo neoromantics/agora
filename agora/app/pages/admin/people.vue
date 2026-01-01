@@ -110,6 +110,7 @@ function resetForm() {
   formState.systemPrompt = ''
   formState.topics = ''
   formState.quotes = ''
+  portraitInput.value?.reset?.()
 }
 
 function openCreate() {
@@ -121,6 +122,7 @@ function openCreate() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function openEdit(phil: any) {
+  portraitInput.value?.reset?.()
   formState.name = phil.name
   formState.slug = phil.slug
   formState.era = phil.era

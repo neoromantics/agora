@@ -89,14 +89,14 @@ async function onSubmit() {
   try {
     // Handle deferred upload
     const finalAvatar = await avatarInput.value?.upload()
-    if (finalAvatar !== null) {
-      state.avatar = finalAvatar
-    }
+
+    // Note: We don't update state.avatar immediately because finalAvatar is minio://
+    // We let the mutation save it, and then initialize() will refresh the user with the proxied URL.
 
     const variables: Record<string, string | null | undefined> = {
       name: state.name,
       bio: state.bio,
-      avatar: state.avatar,
+      avatar: finalAvatar || state.avatar, // Use new upload or existing
       username: state.username,
       email: state.email
     }
@@ -137,7 +137,10 @@ async function onSubmit() {
     showPasswordSection.value = false
 
     // Refresh user data
-    initialize()
+    await initialize()
+
+    // Clear pending file state (blob) so component shows the new (refreshed) image
+    avatarInput.value?.resetPending?.()
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     toast.add({ title: 'Update failed', description: message, color: 'error' })

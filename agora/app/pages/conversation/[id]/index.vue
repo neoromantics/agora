@@ -848,9 +848,18 @@ async function deleteConversation() {
           >
             <!-- Avatar -->
             <div class="flex-shrink-0">
+              <div
+                v-if="philosopher && philosopher.portrait"
+                class="w-6 h-6 rounded-full overflow-hidden border-2 border-stone-300 dark:border-stone-700"
+              >
+                <img
+                  :src="philosopher.portrait"
+                  :alt="philosopher.name"
+                  class="w-full h-full object-cover"
+                >
+              </div>
               <UAvatar
-                v-if="philosopher"
-                :src="philosopher.portrait"
+                v-else-if="philosopher"
                 :alt="philosopher.name"
                 size="sm"
                 class="border-2 border-stone-300 dark:border-stone-700"

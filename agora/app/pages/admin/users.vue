@@ -174,6 +174,7 @@ const userForm = reactive({
 })
 
 function openCreateModal() {
+  avatarInput.value?.reset?.()
   editingUser.value = null
   isCreating.value = true
   userForm.name = ''
@@ -187,6 +188,7 @@ function openCreateModal() {
 }
 
 function openEditModal(user: AdminUser) {
+  avatarInput.value?.reset?.()
   editingUser.value = user
   isCreating.value = false
   userForm.name = user.name
@@ -328,8 +330,18 @@ const formatJoinDate = useHydrationSafeFormatter((dateStr: string) =>
             :to="`/user/${user.username}`"
             class="hover:scale-110 transition-transform"
           >
+            <div
+              v-if="user.avatar"
+              class="h-10 w-10 rounded-full overflow-hidden ring-1 ring-stone-200 dark:ring-stone-700"
+            >
+              <img
+                :src="user.avatar"
+                :alt="user.name"
+                class="h-full w-full object-cover"
+              >
+            </div>
             <UAvatar
-              :src="user.avatar || undefined"
+              v-else
               :alt="user.name"
               size="md"
               class="ring-1 ring-stone-200 dark:ring-stone-700 cursor-pointer"

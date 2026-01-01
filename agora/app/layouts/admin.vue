@@ -84,8 +84,18 @@ watch(() => route.fullPath, () => {
       <!-- User/Footer -->
       <div class="p-4 border-t border-stone-100 dark:border-stone-800/50 bg-stone-50/50 dark:bg-stone-900/50">
         <div class="flex items-center gap-3 px-2">
+          <div
+            v-if="user?.avatar"
+            class="w-8 h-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-stone-800"
+          >
+            <img
+              :src="user.avatar"
+              :alt="user.name"
+              class="w-full h-full object-cover"
+            >
+          </div>
           <UAvatar
-            :src="user?.avatar || undefined"
+            v-else
             :alt="user?.name"
             size="sm"
             class="ring-2 ring-white dark:ring-stone-800"
