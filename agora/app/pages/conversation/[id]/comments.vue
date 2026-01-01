@@ -83,8 +83,18 @@ const isOwner = computed(() => conversation.value?.userId === user.value?.id)
       >
         <div class="flex items-center gap-4 mb-4">
           <NuxtLink :to="`/person/${conversation.philosopher.slug}`">
+            <div
+              v-if="conversation.philosopher.portrait"
+              class="w-12 h-12 rounded-full overflow-hidden ring-1 ring-stone-200 dark:ring-stone-700 bg-stone-100 dark:bg-stone-800"
+            >
+              <img
+                :src="conversation.philosopher.portrait"
+                :alt="conversation.philosopher.name"
+                class="w-full h-full object-cover"
+              >
+            </div>
             <UAvatar
-              :src="conversation.philosopher.portrait"
+              v-else
               :alt="conversation.philosopher.name"
               size="lg"
             />

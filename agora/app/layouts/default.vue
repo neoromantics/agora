@@ -14,7 +14,7 @@ function logout() {
 const userMenuItems = computed(() => [
   [{
     label: user.value?.name || 'Profile',
-    avatar: { src: user.value?.avatar || undefined },
+    slot: 'profile',
     disabled: true
   }],
   [{
@@ -56,7 +56,9 @@ const userMenuItems = computed(() => [
           <UColorModeButton />
 
           <template v-if="isAuthenticated">
-            <UDropdownMenu :items="userMenuItems">
+            <UDropdownMenu
+              :items="userMenuItems"
+            >
               <UButton
                 variant="ghost"
                 color="neutral"
@@ -79,6 +81,27 @@ const userMenuItems = computed(() => [
                   size="xs"
                 />
               </UButton>
+
+              <template #profile="{ item }">
+                <div class="flex items-center gap-2 w-full">
+                  <div
+                    v-if="user?.avatar"
+                    class="relative h-6 w-6 rounded-full overflow-hidden ring-1 ring-stone-200 dark:ring-stone-700"
+                  >
+                    <img
+                      :src="user.avatar"
+                      :alt="item.label"
+                      class="h-full w-full object-cover"
+                    >
+                  </div>
+                  <UAvatar
+                    v-else
+                    :alt="item.label"
+                    size="2xs"
+                  />
+                  <span class="truncate">{{ item.label }}</span>
+                </div>
+              </template>
             </UDropdownMenu>
           </template>
 
