@@ -77,12 +77,14 @@ graph TB
         
         PostgreSQL[(PostgreSQL)]
         Redis[(Redis)]
+        MinIO[(MinIO Object Storage)]
     end
     
     Client --> Traefik
     Traefik -->|PathPrefix /agora| Agora
     Agora --> PostgreSQL
     Agora --> Redis
+    Agora --> MinIO
     Secrets -.->|Inject ENV| Agora
 ```
 
@@ -91,6 +93,7 @@ graph TB
 - **Traefik**: Ingress controller handling SSL (Let's Encrypt) and routing.
 - **Helm**: Manages the deployment charts (`helm/agora`).
 - **Secrets**: Kubernetes `Secret` objects store sensitive data (never committed).
+- **MinIO**: S3-compatible object storage for user avatars and uploaded images.
 
 ---
 
@@ -110,6 +113,21 @@ The application relies on the `agora-secrets` Kubernetes object. Here is the exh
 | `gemini-api-key` | `NUXT_GEMINI_API_KEY` | **Runtime**: LLM API access |
 | `postgres-password` | *(Internal)* | **Helm**: PostgreSQL container auth |
 | `redis-password` | *(Internal)* | **Helm**: Redis container auth |
+| `minio-root-user` | `MINIO_ROOT_USER` | **Runtime**: MinIO object storage access |
+| `minio-root-password` | `MINIO_ROOT_PASSWORD` | **Runtime**: MinIO object storage auth |
+
+### GitHub Actions Secrets
+The CI/CD pipeline requires these secrets in your GitHub repository (Settings → Secrets and variables → Actions):
+
+| GitHub Secret | Description |
+|---------------|-------------|
+| `KUBECONFIG` | Base64-encoded kubeconfig for cluster access |
+| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `REDIS_PASSWORD` | Redis password |
+| `JWT_SECRET` | JWT signing secret (32+ chars) |
+| `GEMINI_API_KEY` | Google Gemini API key |
+| `MINIO_ROOT_USER` | MinIO username (e.g., `root`) |
+| `MINIO_ROOT_PASSWORD` | MinIO password |
 
 ### Service Authentication via Helm
 The PostgreSQL and Redis containers (managed by Bitnami charts) consume passwords directly from the secret:
@@ -332,3 +350,51 @@ After setting up the **NEW** cluster (and ensuring pods are running):
     ```
 
 *Note: Redis data is typically ephemeral (cache). If you need to migrate it, copy the `/bitnami/redis/data/dump.rdb` file similarly.*
+
+---
+
+## 8. MinIO Data Migration (Avatars & Uploads)
+
+To migrate uploaded images (avatars, etc.) between environments:
+
+### Prerequisites
+Install MinIO client locally:
+```bash
+curl -sL https://dl.min.io/client/mc/release/linux-amd64/mc -o /tmp/mc && chmod +x /tmp/mc
+```
+
+### 1. Export from Source
+```bash
+# Port-forward to source MinIO
+kubectl port-forward -n agora-staging svc/agora-minio 9000:9000 &
+
+# Configure alias
+/tmp/mc alias set source http://localhost:9000 root $(kubectl get secret agora-secrets -n agora-staging -o jsonpath='{.data.minio-root-password}' | base64 -d)
+
+# Download all files
+/tmp/mc cp -r source/agora/ /tmp/minio-backup/
+
+# Stop port-forward
+pkill -f "port-forward.*9000"
+```
+
+### 2. Import to Destination
+```bash
+# Port-forward to destination MinIO
+kubectl port-forward -n agora svc/agora-minio 9001:9000 &
+
+# Configure alias
+/tmp/mc alias set dest http://localhost:9001 root $(kubectl get secret agora-secrets -n agora -o jsonpath='{.data.minio-root-password}' | base64 -d)
+
+# Create bucket if needed
+/tmp/mc mb -p dest/agora
+
+# Upload all files
+/tmp/mc cp -r /tmp/minio-backup/* dest/agora/
+
+# Verify
+/tmp/mc ls dest/agora/avatars/
+
+# Stop port-forward
+pkill -f "port-forward.*9001"
+```

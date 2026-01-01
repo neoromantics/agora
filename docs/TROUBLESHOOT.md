@@ -6,6 +6,7 @@ This document contains solutions to common issues encountered during development
 - [UModal Content Renders Inline Instead of Overlay](#umodal-content-renders-inline-instead-of-overlay)
 - [500 Errors on Admin Pages During SSR](#500-errors-on-admin-pages-during-ssr)
 - [Mobile Menu Not Responding to Clicks](#mobile-menu-not-responding-to-clicks)
+- [Avatars Not Displaying (UAvatar Issues)](#avatars-not-displaying-uavatar-issues)
 
 ---
 
@@ -222,5 +223,49 @@ Don't use for:
 
 ---
 
+## Avatars Not Displaying (UAvatar Issues)
+
+### Symptom
+User avatars or philosopher portraits display correctly on some pages (Gallery, Admin) but not others (Feed, Conversation Cards, Top Bar Dropdown).
+
+### Root Cause
+The `UAvatar` component from Nuxt UI performs internal validation on image URLs before rendering. This validation can fail for proxied URLs or when the image server doesn't respond correctly to HEAD requests.
+
+### Solution
+Replace `UAvatar` with native `<img>` tags wrapped in a conditional div:
+
+```vue
+<!-- BAD: UAvatar may not render -->
+<UAvatar :src="user.avatar" :alt="user.name" size="sm" />
+
+<!-- GOOD: Native img always renders -->
+<div v-if="user?.avatar" class="w-8 h-8 rounded-full overflow-hidden">
+  <img
+    :src="user.avatar"
+    :alt="user.name"
+    class="w-full h-full object-cover"
+  >
+</div>
+<UAvatar v-else :alt="user?.name" size="sm" />
+```
+
+### Files Updated
+This fix was applied to:
+- `layouts/default.vue` (Top Bar + Dropdown)
+- `components/ConversationCard.vue` (User + Philosopher avatars)
+- `pages/conversation/[id]/comments.vue` (Header)
+- `pages/admin/users.vue`, `pages/admin/conversations.vue`
+- `components/CommentSection.vue`, `components/CommentItem.vue`
+- `components/ForkConversationModal.vue`
+- `layouts/admin.vue`
+
+### Additional Fixes
+1. **CSP**: Add `blob:` to `img-src` in `server/middleware/headers.ts` for upload previews
+2. **HEAD Requests**: Rename `server/api/img/[type]/[id].get.ts` to `[id].ts` to handle all HTTP methods
+
+**Reference**: Fixed in Revisions 143-148
+
+---
+
 *Document created: December 15, 2025*
-*Last updated: December 15, 2025*
+*Last updated: January 1, 2026*
